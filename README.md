@@ -42,16 +42,20 @@
 5. **度量选择两次被 gate 纠正**:makespan 不敏感 → Σ completion 被 release 主导 → Σ flow time
 6. **未被消费的代码也会腐蚀 schema**(forecast zip bug)
 
-## v1.2 研究转向(2026-08-16,当前有效)
+## 研究状态(v1.3,当前有效)
 
-**SPEC_UPDATE_v1.2.md 为最高效力**。研究问题升级为 **DWERP**(序列 Expert Routing,
-带物理重配置/切换成本);Go/No-Go = T0/T1/T2 三道;R09(v1.1 单道)终止。
-**T0 已 GO**(R10:E7 统治 67%<80%,distinct 4,切换与相位对齐)。
+**SPEC_UPDATE_v1.3.md 为最高效力**(v1.2 > v1.1 > v1.0)。DWERP + "When NOT to
+reconfigure" 核心命题;判据 = 事件依赖(保险型)框架。
 
-| Run | 内容 | 结果 |
-|-----|------|------|
-| R09 | (v1.1 单道,已终止) | 修复 4 个实现 bug 后被 v1.2 取代 |
-| **R10** | **T0 Expert Diversity**(28 天序列 × 8 相位 × 3 seeds) | **GO**:promo→E3/E4 家族,stable→E1,mc_shock→E7;W2 修复 move_cost_scale 接线 |
+| 关卡 | 状态 |
+|------|------|
+| T0 Diversity | ✅ GO(R10) |
+| T1a Existence | ✅ YES(seed 17:sac 80→regret 2116,TrapScore 26.3) |
+| T1b Prevalence | ✅ 完成(R12:保险型重尾;material trap 1/12;divergence 集中在转变前夜) |
+| T2 Sensitivity | ✅ 完成(R13:左低+中峰(λm=10)+右 plateau;"只搬最关键的") |
+| T1.5 move vs switch | ⬜ 下一步 |
+
+阶段总结文档:`PROGRESS_v1.3.md`
 
 ## 工作规则(用户规定,长期有效)
 
