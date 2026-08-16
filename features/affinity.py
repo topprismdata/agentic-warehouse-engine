@@ -37,8 +37,21 @@ def compute_affinity(
     order_lines,
     alpha: float = 1.0,
     top_k: int = 5,
+    line_day=None,
+    history_time_span_days: float = 0.0,
 ) -> AffinityGraph:
-    """Build the affinity graph from order lines (basket = distinct SKUs per order)."""
+    """Build the affinity graph from order lines (basket = distinct SKUs per order).
+
+    v1.1: optional recency weighting (same ramp as features.forecast — last
+    third of the span gets up to 3x weight) so DYNAMIC affinity (E3 under
+    regimes) can read emerging co-pick structure, per spec §13.2's long-term
+    vs recent affinity distinction."""
+    def _w_of(day: float) -> float:
+        if history_time_span_days <= 0 or line_day is None:
+            return 1.0
+        frac = min(1.0, max(0.0, day / history_time_span_days))
+        return 1.0 + 2.0 * max(0.0, frac - 2.0 / 3.0) * 3.0
+
     order_skus: Dict[str, set] = defaultdict(set)
     for line in order_lines:
         order_skus[line.order_id].add(line.sku_id)
@@ -46,13 +59,19 @@ def compute_affinity(
     if n_orders == 0:
         return AffinityGraph(pd.DataFrame(), {}, 0, alpha)
 
-    support: Dict[str, int] = defaultdict(int)
-    copick: Dict[Tuple[str, str], int] = defaultdict(int)
-    for skus in order_skus.values():
+    order_weight: Dict[str, float] = {}
+    for oid in order_skus:
+        d = line_day.get(oid, 0.0) if line_day else 0.0
+        order_weight[oid] = _w_of(d)
+
+    support: Dict[str, float] = defaultdict(float)
+    copick: Dict[Tuple[str, str], float] = defaultdict(float)
+    for oid, skus in order_skus.items():
+        wgt = order_weight[oid]
         for s in skus:
-            support[s] += 1
+            support[s] += wgt
         for i, j in combinations(sorted(skus), 2):
-            copick[(i, j)] += 1
+            copick[(i, j)] += wgt
 
     rows = []
     for (i, j), c in copick.items():

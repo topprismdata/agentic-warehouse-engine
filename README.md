@@ -42,6 +42,17 @@
 5. **度量选择两次被 gate 纠正**:makespan 不敏感 → Σ completion 被 release 主导 → Σ flow time
 6. **未被消费的代码也会腐蚀 schema**(forecast zip bug)
 
+## v1.2 研究转向(2026-08-16,当前有效)
+
+**SPEC_UPDATE_v1.2.md 为最高效力**。研究问题升级为 **DWERP**(序列 Expert Routing,
+带物理重配置/切换成本);Go/No-Go = T0/T1/T2 三道;R09(v1.1 单道)终止。
+**T0 已 GO**(R10:E7 统治 67%<80%,distinct 4,切换与相位对齐)。
+
+| Run | 内容 | 结果 |
+|-----|------|------|
+| R09 | (v1.1 单道,已终止) | 修复 4 个实现 bug 后被 v1.2 取代 |
+| **R10** | **T0 Expert Diversity**(28 天序列 × 8 相位 × 3 seeds) | **GO**:promo→E3/E4 家族,stable→E1,mc_shock→E7;W2 修复 move_cost_scale 接线 |
+
 ## 工作规则(用户规定,长期有效)
 
 **每次更新对完成的结果自审 3 次,再决定下一步**:

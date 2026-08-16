@@ -37,32 +37,44 @@ def assign_static_abc(
     decision_id: str,
     as_of: datetime,
 ) -> Tuple[List[SlotAssignment], Dict[str, str]]:
-    # 1. Compute pick frequency per sku across all orders (this is what spec §16.2 calls "Historical Pick Frequency")
+    """Static ABC — rank by historical pick frequency, FILL nearest locations
+    to capacity before moving further away.
+
+    v1.1 fix (R09 review): the original round-robin (rank i -> loc i mod L)
+    stuffed a LOW-frequency SKU into the nearest location's second capacity
+    slot whenever n > L, systematically mis-slotting the 2nd-highest SKU. That
+    defect leaked into every benchmark anchored on B1 (R01-R08); those runs
+    are re-executed and re-numbered after this fix.
+    """
     freq: Dict[str, float] = defaultdict(float)
     for line in order_lines:
         freq[line.sku_id] += line.quantity
 
-    # SKUs we have no picks for still need *some* assignment; default freq=0 sorts last
     ranked_skus = sorted(sku_ids, key=lambda s: freq.get(s, 0.0), reverse=True)
+    ranked_locs = sorted(pickable_locations, key=lambda l: _euclidean((l.x, l.y, l.z)))
 
-    # 2. Pickable locations ranked by distance to entrance (closest first)
-    ranked_locs = sorted(
-        pickable_locations,
-        key=lambda loc: _euclidean((loc.x, loc.y, loc.z)),
-    )
+    import math as _math
+    cap = max(1, _math.ceil(len(sku_ids) / len(ranked_locs)))
+    remaining = {l.location_id: cap for l in ranked_locs}
 
     sku_to_loc: Dict[str, str] = {}
     rows: List[SlotAssignment] = []
-    # 3. Assign one-to-one by rank. If sku count > location count, wrap (cycles).
-    for i, sku in enumerate(ranked_skus):
-        loc = ranked_locs[i % len(ranked_locs)]
-        sku_to_loc[sku] = loc.location_id
+    for sku in ranked_skus:
+        placed = None
+        for l in ranked_locs:
+            if remaining[l.location_id] > 0:
+                placed = l
+                break
+        if placed is None:
+            raise RuntimeError(f"E1 capacity exhausted at {sku}")
+        remaining[placed.location_id] -= 1
+        sku_to_loc[sku] = placed.location_id
         rows.append(SlotAssignment(
             timestamp=as_of,
             sku_id=sku,
-            location_id=loc.location_id,
+            location_id=placed.location_id,
             assigned_capacity=1.0,
-            reason="B1_StaticABC",
+            reason="E1_StaticABC",
             decision_id=decision_id,
             source_type=SourceType.SYNTHETIC,
         ))
