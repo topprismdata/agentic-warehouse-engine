@@ -1,0 +1,43 @@
+# main_config.yaml
+# Agentic Warehouse Decision Engine - 主配置
+
+project:
+  name: agentic-warehouse-engine
+  version: 0.1.0
+  spec_ref: FMCG_Agentic_Warehouse_Decision_Engine_v1.0.pdf
+
+runtime:
+  seed: 42  # 全局随机种子,可被 --override 覆盖
+  log_level: INFO
+  data_root: data/canonical
+
+# World State 默认规模(v0.1 都用合成数据)
+world_state:
+  n_skus: 50
+  n_locations: 12
+  n_days: 14
+  orders_per_day_mean: 14
+  orders_per_day_std: 4
+  source_type: synthetic  # lineage 主标记
+
+# OR Expert Library 默认注册
+experts:
+  registered:
+    - B0_Random
+    - B1_StaticABC
+  default_baseline: B1_StaticABC  # NormalizedCost 的分母
+
+# 主指标
+metric:
+  name: NormalizedCost
+  numerator_components:
+    - pick_distance_total  # v0.1 暂时只用 Euclidean distance proxy
+    - replenishment_count  # stub: 0
+    - relocation_count     # stub: 0
+  denominator: Cost_StaticABC
+
+# 三重 verify 开关(v0.1 暂未实现 sim / solver verifier)
+verify:
+  solver_verify: false
+  historical_replay: false  # 等 milestone 2 开启
+  counterfactual_sim: false

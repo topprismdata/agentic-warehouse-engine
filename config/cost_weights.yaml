@@ -1,0 +1,21 @@
+# cost_weights.yaml
+# 见 spec §3.2: α·C_pick + β·C_replenish + γ·C_relocate + δ·C_congestion + ε·C_risk + ζ·C_service
+# v0.1 暂时只用 C_pick;其它 5 项以 0 占位,待 v0.2 引入真实数据后标定
+
+weights:
+  alpha_pick: 1.0          # C_pick 系数
+  beta_replenish: 0.0      # 未启用(spec §13 留待 Forecast 接入后启用)
+  gamma_relocate: 0.0      # 未启用(spec §12.6 Move Economics 启用条件:cost > 0)
+  delta_congestion: 0.0    # 未启用(等 milestone 2 引入 SimPy replay)
+  epsilon_risk: 0.0        # 未启用(spec §3.2 risk = FEFO / 温区 / 危险品)
+  zeta_service: 0.0        # 未启用(spec §3.2 SLA / 缺货)
+
+# 业务可注入规范(business owner 只需改此项)
+# 注意:
+#   1. v0.1 中 C_x 都按"单位:成本点"计;C_pick 用 total route distance (meter) 作 proxy
+#   2. 任意权重改动必须经过 "evaluation_gate()" 验证 NormalizedCost 不退化
+#   3. 业务规则不得在 code 内硬编码,只能在此文件改
+
+notes: |
+  - v0.1 baseline 之 baseline = B1 Static ABC;(alpha=1, others=0) 给出归一基准
+  - 真实生产环境的 β/γ 应在 v0.2 用历史回放做 regression,见 evaluation/cost_calibration.md 占位

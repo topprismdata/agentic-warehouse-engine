@@ -1,0 +1,27 @@
+# .gitignore for agentic-warehouse-engine
+
+# data (gitignored per spec §4.3 — lineage lives in code, not in git)
+data/raw/
+data/canonical/*.parquet
+data/scenarios/*.parquet
+
+# outputs
+outputs/models/
+*.pkl
+*.joblib
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/
+
+# mlflow
+mlruns/
+mlflow.db

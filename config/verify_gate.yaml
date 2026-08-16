@@ -1,0 +1,47 @@
+# verify_gate.yaml
+# 见 spec §14.2 三重 Verification + §16.4 Stress Tests
+# v0.1 只启用了 schema-level gate 和 gate_metric_gate;solver/replay/sim 留 v0.2
+
+gates:
+  # Stage 1: 数据质量 + 血缘完整
+  schema_gate:
+    enabled: true
+    checks:
+      - all_tables_canonical
+      - known_at_time_present_in_orders
+      - lineage_source_type_present_in_every_record
+      - constraint_version_format_ok
+      - no_future_orders_in_past_window  # 防 future leakage,spec §4.3
+
+  # Stage 3 之后:B0/B1/B2 baseline 必须可重现
+  reproducibility_gate:
+    enabled: true
+    config:
+      threshold_seed_count: 5              # 5 颗种子取均值
+      b1_within_pct: 0.01                  # B1 是确定性 baseline;rel_dev ≤ 1%
+    checks:
+      - b1_static_abc_under_seed_42_cost_within_1pct_across_5_runs
+
+  # 主指标改善门:B0 vs B1 必须方向正确且稳健
+  metric_gate:
+    enabled: true
+    config:
+      baseline: B1_StaticABC
+      threshold_relative_improvement: 0.05   # 改进 ≥ 5% 视为通过(spec §18.6 的"显著优于"具体化为 5%)
+      threshold_seed_count: 5                 # 5 颗种子取均值
+      threshold_win_rate: 1.0                 # 每颗种子下 B0 都应比 B1 差(纯随机策略的 std/mean 是策略固有属性,不作 gate)
+
+  # Stage 4(v0.2 启用)
+  solver_gate:
+    enabled: false
+    config:
+      max_gap_relative: 0.05                # spec §14.1 的 solver gap ≤ 5%
+  replay_gate:
+    enabled: false
+    config:
+      min_covered_days: 30                   # spec §16.4
+      max_mape: 0.20                         # spec 14.3 sim 校准上限
+  sim_gate:
+    enabled: false
+    config:
+      max_relative_mae: 0.15                 # spec §16.4 simulator fidelity L1
