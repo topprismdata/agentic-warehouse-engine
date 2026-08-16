@@ -13,14 +13,30 @@
 | 4 | Canonical schema DDL | ✅ | Stage 1 |
 | 5 | Instacart/Favorita 接入 | ⬜(留 v0.2) | Stage 1 |
 | 6 | SLAPStack layout 接入 | ⬜(留 v0.2) | Stage 1 |
-| 7 | Affinity 计算器 | ⬜ | Stage 2 |
-| 8 | Warehouse graph + travel-time | ⬜(用欧氏距离 proxy) | Stage 2 |
+| 7 | Affinity 计算器 | ✅ R02 | Stage 2 |
+| 8 | Warehouse graph + travel-time | ◐ 欧氏 proxy + L1 时间;真实标定待 #6 | Stage 2 |
 | 9 | B0 Random + B1 Static ABC + B2 COI | ✅ | Stage 3 |
-| 10 | CP-SAT Dynamic Slotting | ⬜ | Stage 3 |
-| 11 | SimPy L1 replay | ⬜ | Stage 4 |
+| 10 | CP-SAT Dynamic Slotting | ✅ R03(stop-count 目标留 v0.3) | Stage 3 |
+| 11 | SimPy L1 replay | ✅ R04(未标定) | Stage 4 |
 | 12 | Execution Gateway stub | ⬜ | Stage 4 |
 
-**v0.1 最小闭环已建(8 件),剩 4 件留到下个 milestone。**
+**v0.2 完成:11/12 件落地(剩 #5/#6 真实数据、#12 gateway stub、#8 标定)。**
+
+## 实验结果(seed=42, 120 SKU / 60 位置 / 14 天)
+
+| Run | 内容 | 结果(NormalizedCost vs B1) |
+|-----|------|------------------------------|
+| R01 | schema + B0/B1/B2(legacy 度量:每行距离) | B1=1.00 B2=1.11 B0=1.71 |
+| R02 | Affinity + L0 route 度量 + B3 | **B3=0.4527** B2=1.13 B0=1.79 |
+| R03 | B4 CP-SAT(λ sweep) | **B4(λ=0)=0.6654 OPT**(未胜 B3,公式化留 v0.3) |
+| R04 | SimPy L1 replay(Σ flow time) | B3=0.6987 B4=0.8489 B2=1.0554 B0=1.3212,L0/L1 排序一致 |
+
+### 已固化的实验发现
+1. **世界必须有结构**(Zipf 频率 + basket 共现),否则基线无区分度(gate 抓到)
+2. **仓库几何必须真实**(v0.1 的 5m 小仓在时间度量下抹平一切差异 → 放大到 120m)
+3. **L0(距离)→ L1(时间)必须过 ranking-preservation 检查**:小世界中 B3/B4 排序翻转是 travel 被压缩的伪影
+4. **CP-SAT 的 affinity rank-distance 线性化与 route metric 错位**:λ↑ 反而变差;容量约束(2/位置)下不敌 B3 共停启发式;正确公式化需 stop-count 项(v0.3)
+5. **度量选择两次被 gate 纠正**:makespan 不敏感(低利用率)→ Σ completion 被 release 主导 → Σ flow time 正确
 
 ## 设计原则(沿用 spec §8.4 自审后 8 条)
 

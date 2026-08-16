@@ -70,10 +70,13 @@ def make_locations(n: int, rng: random.Random) -> Tuple[List[Location], Dict[str
     for i in range(n):
         bay = i // 3
         level = i % 3
-        # distance from entrance grows with bay index
-        x = round(bay * 1.2 + 0.5, 2)    # aisle depth
-        y = round(level * 0.4, 2)         # shelf level (vertical-ish proxy)
-        z = round(rng.choice([-0.3, 0.3]), 2)  # side of aisle
+        # realistic DC geometry: bays 6 m apart, aisle depth up to ~120 m.
+        # (The v0.1 1.2 m grid made travel trivial vs pick time — caught by R04
+        #  when B0's flow matched B1: a warehouse you can cross in 5 seconds
+        #  cannot reward slotting in a TIME metric.)
+        x = round(bay * 6.0 + 2.0, 2)   # aisle depth (m)
+        y = round(level * 1.6, 2)       # shelf level height (m)
+        z = round(rng.choice([-1.2, 1.2]), 2)  # side of aisle
         loc_id = f"L{bay:02d}{level:01d}"
         rows.append(Location(
             location_id=loc_id,
