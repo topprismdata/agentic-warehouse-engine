@@ -18,7 +18,7 @@
 | 9 | B0 Random + B1 Static ABC + B2 COI | ✅ | Stage 3 |
 | 10 | CP-SAT Dynamic Slotting | ✅ R03(stop-count 目标留 v0.3) | Stage 3 |
 | 11 | SimPy L1 replay | ✅ R04(未标定) | Stage 4 |
-| 12 | Execution Gateway stub | ⬜ | Stage 4 |
+| 12 | Execution Gateway stub | ✅ R06(8/8 路由/拒绝测试) | Stage 4 |
 
 **v0.2 完成:11/12 件落地(剩 #5/#6 真实数据、#12 gateway stub、#8 标定)。**
 
@@ -31,6 +31,7 @@
 | R01 | schema + B0/B1/B2(legacy 度量:每行距离) | legacy 基线,仅存档 |
 | R02–R04 | affinity / CP-SAT / SimPy(全知协议) | 排名已撤回(违约+泄漏) |
 | **R05** | **诚实评估**:slot 1–7 天 / replay 8–14 天,容量审计 | **B4=0.8089** B3=0.8442 B2=0.9707 B0=1.6686(L0);L1: B4=0.9056 B3=0.9189 B0=1.2893;gates 全 PASS |
+| R06 | Execution Gateway stub(dry-run) | 8/8:四档风险路由 + 5 拒绝码 + §15.4 审计行 |
 
 ### 已固化的实验发现(经三轮自审修订)
 1. **世界必须有结构**(Zipf 频率 + basket 共现),否则基线无区分度(gate 抓到)
