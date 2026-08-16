@@ -188,3 +188,35 @@ def solve_cpsat(
     if verbose:
         print(f"[cpsat] {report.to_dict()}")
     return rows, sku_to_loc, report
+
+
+def build_decision_plan(
+    assignments: List[SlotAssignment],
+    expected_cost: float,
+    baseline_cost: float,
+    report: SolverReport,
+    confidence: float = 1.0,
+) -> DecisionPlan:
+    """Emit the App-A audit row for a B4 solve. `verifier_status` mirrors the
+    solver report (spec §14.2: LLM/optimizer output is only trusted with status)."""
+    return DecisionPlan(
+        decision_id=f"DP-B4-{assignments[0].timestamp.isoformat()}",
+        problem_type=ProblemType.DYNAMIC_SLOTTING,
+        horizon_start=assignments[0].timestamp,
+        horizon_end=assignments[0].timestamp,
+        actions=[
+            {"action": f"ASSIGN {a.sku_id} -> {a.location_id}",
+             "reason": a.reason, "expected_saving": 0.0, "confidence": confidence}
+            for a in assignments
+        ],
+        expected_cost=expected_cost,
+        baseline_cost=baseline_cost,
+        confidence=confidence,
+        verifier_status=report.status if report.status == "feasible" else "error",
+        approval_status="auto",
+        risk_class=RiskClass.LOW,
+        model_version=f"B4_CPSAT@v0.2(obj={report.objective_value:.1f})",
+        constraint_version="v0.1.0",
+        lineage=SourceType.DERIVED,
+        source_type=SourceType.DERIVED,
+    )

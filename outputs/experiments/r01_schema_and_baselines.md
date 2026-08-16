@@ -1,17 +1,17 @@
 # R01 — schema + baselines (B0 Random, B1 Static ABC, B2 COI)
 
-**Date**: 2026-08-16T09:22:23.645325+00:00
+**Date**: 2026-08-16T09:46:11.868452+00:00
 **Seed**: 42
 **Spec**: FMCG_Agentic_Warehouse_Decision_Engine_v1.0.pdf
 
 ## Stage 0 — Configuration
 - `main_config.yaml`: project `agentic-warehouse-engine` v0.1.0
-- World State size: SKUs = 50, locations = 12, days = 14
+- World State size: SKUs = 120, locations = 60, days = 14
 - Cost weights: α=1.0, β..ζ=0.0 (v0.1 pick-only)
 
 ## Stage 1 — Data Loading (synthetic)
 - 9 canonical tables present: ['constraints', 'decision_plan', 'forecast_daily', 'inventory_snapshot', 'locations', 'order_lines', 'orders', 'sku_master', 'slot_assignment']
-- Records: {'sku_master': 50, 'orders': 191, 'order_lines': 669, 'forecast_daily': 700, 'locations': 12, 'inventory_snapshot': 50, 'slot_assignment': 350, 'constraints': 9, 'decision_plan': 7}
+- Records: {'sku_master': 120, 'orders': 191, 'order_lines': 678, 'forecast_daily': 1680, 'locations': 60, 'inventory_snapshot': 120, 'slot_assignment': 840, 'constraints': 41, 'decision_plan': 7}
 - hard-fails = 0, soft warnings = 0
 
 ## Stage 2 — Feature Engineering
@@ -21,11 +21,11 @@
 
 | Expert | Total cost (± std over 5 seeds) | NormalizedCost vs B1 |
 |--------|---------------|-------------------|
-| **B1 Static ABC** | **5728.101** | **1.0000** |
-| B2 COI            | 6344.279 | 1.1076 |
-| B0 Random         | 9769.116 ± 2355.433 | 1.7055 |
+| **B1 Static ABC** | **65845.630** | **1.0000** |
+| B2 COI            | 79643.965 | 1.2096 |
+| B0 Random         | 236973.047 ± 44710.035 | 3.5989 |
 
-- Per-seed B0 costs: [9554.668, 8449.185, 8770.741, 7737.924, 14333.064]
+- Per-seed B0 costs: [221201.59, 253600.949, 299043.282, 248154.241, 162865.173]
 - B1 is the deterministic anchor.
 - B0 should be **worse** than B1; metric_gate asserts `|B0_norm - 1| > 0.05` and win_rate `>= 1.0`.
 - win_rate(B0 worse than B1) = **1.00** across 5 seeds (per-seed comparison; std/mean is not used — see gate docstring).

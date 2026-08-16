@@ -145,13 +145,13 @@ def main():
 ## Notes
 - Linearization: affinity term uses rank-distance |pos_i − pos_j| scaled to meters
   (spec §12.4 two-stage collapsed; full location-pair quadratic is a v0.3 upgrade).
-- **Finding (negative result worth keeping):** under the L0 route metric — which
-  counts DISTINCT stops per order — the capacity-constrained optimal freq–dist
-  assignment (λ=0) already captures most co-stop benefit implicitly; the explicit
-  affinity term pushes on rank-distance, which is MISALIGNED with the route metric
-  and makes solutions worse as λ grows. An affinity term only pays off when the
-  cost metric cannot see shared stops (per-line cost) or when capacity is tight
-  enough that clustering decisions must trade off against frequency.
+- **Finding REVISED (v0.2 review F4 — the original 'worsens monotonically in λ'
+  claim was FALSE):** λ>0 solves hit the 10 s budget, so their route costs are
+  incumbents, not proofs. In the 120-SKU world the λ-curve is non-monotone
+  (λ=1.0 incumbent 0.7401 < λ=0.5 0.9369). The only conclusive point is λ=0
+  (OPTIMAL): no λ>0 incumbent beat it under L0 in this run. NOTE: this run's
+  B3 comparison predates the capacity fix (review F2) — see R05 for the fair,
+  leakage-free ranking, where B4(λ=0) beats B3.
 """)
     log.log(f"  wrote {out.relative_to(ROOT)}")
     log.log("=== done ===")

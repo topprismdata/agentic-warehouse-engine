@@ -183,10 +183,16 @@ def make_forecast_daily(
     Then set forecast_residual = max(0, p50 - known_qty).
     """
     rows = []
+    # order_id -> Order map. NOTE: order_lines has 1-6 rows per order, so
+    # zipping (lines, orders) positionally scrambles timestamps — caught by
+    # the v0.2 three-round review (5/12 rows wrong on a smoke check).
+    order_map = {o.order_id: o for o in orders}
     # Build lookup: target_date -> sku -> known qty
     known_by_day_sku: Dict[Tuple[date, str], float] = {}
-    for ol, order in zip(order_lines, orders):
-        # known_at_time == order_time in our synthetic data, so "as_of < target" works.
+    for ol in order_lines:
+        order = order_map.get(ol.order_id)
+        if order is None:
+            continue
         d = order.order_time.date()
         known_by_day_sku[(d, ol.sku_id)] = known_by_day_sku.get((d, ol.sku_id), 0.0) + ol.quantity
 

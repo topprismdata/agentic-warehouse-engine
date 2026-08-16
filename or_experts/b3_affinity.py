@@ -45,9 +45,15 @@ def assign_affinity(
     affinity_threshold: float = 0.0,
     location_capacity: int = None,
 ) -> Tuple[List[SlotAssignment], Dict[str, str]]:
-    """Capacity-aware affinity slotting. Clusters are placed at the NEAREST
-    location with remaining capacity (not round-robin), keeping co-picked SKUs
-    together while respecting the same hard capacity B4's solver sees."""
+    """Capacity-aware affinity slotting.
+
+    v0.2 review finding F2: the old version overflowed clusters of 3-4 SKUs
+    into capacity-2 locations (14 violations) while CP-SAT obeyed capacity as
+    a HARD constraint — an unfair fight. Spec §10.4: hard constraints bind
+    every expert identically. Now: clusters are capped at capacity, and any
+    cluster that cannot fit is SPLIT rather than overflowed; a final assert
+    guarantees zero violations (total capacity >= n makes a packing exist).
+    """
     import math as _math
     freq: Dict[str, float] = defaultdict(float)
     for line in order_lines:
@@ -70,33 +76,46 @@ def assign_affinity(
     for sku in sorted(unassigned, key=lambda s: freq.get(s, 0.0), reverse=True):
         clusters.append([sku])
 
-    # --- 2. clusters occupy nearest location with remaining capacity --------
+    # --- 2. capacity-fair placement: split, never overflow -------------------
     ranked_locs = sorted(pickable_locations, key=lambda l: _euclidean((l.x, l.y, l.z)))
     if location_capacity is None:
         location_capacity = max(1, _math.ceil(len(sku_ids) / len(ranked_locs)))
-    used = {l.location_id: 0 for l in ranked_locs}
+    max_cluster = min(max_cluster, location_capacity)
+    remaining = {l.location_id: location_capacity for l in ranked_locs}
+
     sku_to_loc: Dict[str, str] = {}
     rows: List[SlotAssignment] = []
-    for cluster in clusters:
-        placed = None
-        for l in ranked_locs:  # nearest-first with capacity
-            if used[l.location_id] + len(cluster) <= location_capacity:
-                placed = l
-                break
-        if placed is None:  # no single location fits the whole cluster → overflow to nearest
-            placed = min(ranked_locs, key=lambda l: used[l.location_id])
-        used[placed.location_id] += len(cluster)
-        for sku in cluster:
-            sku_to_loc[sku] = placed.location_id
-            rows.append(SlotAssignment(
-                timestamp=as_of,
-                sku_id=sku,
-                location_id=placed.location_id,
-                assigned_capacity=float(len(cluster)),
-                reason="B3_Affinity",
-                decision_id=decision_id,
-                source_type=SourceType.SYNTHETIC,
-            ))
+
+    def place(chunk: List[str]):
+        for l in ranked_locs:  # nearest-first with remaining capacity
+            if remaining[l.location_id] >= len(chunk):
+                remaining[l.location_id] -= len(chunk)
+                for sku in chunk:
+                    sku_to_loc[sku] = l.location_id
+                    rows.append(SlotAssignment(
+                        timestamp=as_of, sku_id=sku, location_id=l.location_id,
+                        assigned_capacity=float(len(chunk)), reason="B3_Affinity",
+                        decision_id=decision_id, source_type=SourceType.SYNTHETIC,
+                    ))
+                return True
+        return False
+
+    queue: List[List[str]] = list(clusters)
+    while queue:
+        cluster = queue.pop(0)
+        if place(cluster):
+            continue
+        # fragmentation: split in half and retry both halves
+        if len(cluster) > 1:
+            mid = len(cluster) // 2
+            queue.insert(0, cluster[mid:])
+            queue.insert(0, cluster[:mid])
+        else:
+            # single SKU with no capacity anywhere left: total capacity >= n
+            # makes this unreachable unless earlier splits wasted space; assert.
+            raise RuntimeError("B3 placement failed: no location with capacity")
+
+    assert all(v >= 0 for v in remaining.values())
     return rows, sku_to_loc
 
 

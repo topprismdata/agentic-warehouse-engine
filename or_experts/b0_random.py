@@ -31,13 +31,28 @@ def assign_random(
     decision_id: str,
     as_of: datetime,
     rng: random.Random,
+    location_capacity: int = None,
 ) -> Tuple[List[SlotAssignment], Dict[str, str]]:
-    """Random sku -> pickable location, ONE assignment per sku. Determinism
-    is controlled by the passed rng; identical seed ⇒ identical plan."""
+    """Random sku -> location, ONE assignment per sku, determinism via rng.
+
+    v0.2 review F2 follow-up: a plan violating the hard capacity constraint is
+    infeasible and would never pass an Execution Gateway (spec §14.2/§15.4) —
+    so the "dumb" baseline draws a random FEASIBLE assignment (shuffle SKUs,
+    fill locations up to capacity) instead of an infeasible one. Same ignorance,
+    valid plan.
+    """
+    import math as _math
+    n, L = len(sku_ids), len(pickable_locations)
+    if location_capacity is None:
+        location_capacity = max(1, _math.ceil(n / max(L, 1)))
+
+    shuffled = list(sku_ids)
+    rng.shuffle(shuffled)
+    slots = [loc.location_id for loc in pickable_locations for _ in range(location_capacity)]
+
     sku_to_loc: Dict[str, str] = {}
     rows: List[SlotAssignment] = []
-    for sku in sku_ids:
-        loc = rng.choice(pickable_locations).location_id
+    for sku, loc in zip(shuffled, slots):
         sku_to_loc[sku] = loc
         rows.append(SlotAssignment(
             timestamp=as_of,
@@ -46,6 +61,16 @@ def assign_random(
             assigned_capacity=1.0,
             reason="B0_Random",
             decision_id=decision_id,
+            source_type=SourceType.SYNTHETIC,
+        ))
+    # n <= L*capacity by construction of capacity — if more SKUs than slots,
+    # wrap (only possible when capacity was passed explicitly too small)
+    for i, sku in enumerate(shuffled[len(slots):]):
+        loc = pickable_locations[i % L].location_id
+        sku_to_loc[sku] = loc
+        rows.append(SlotAssignment(
+            timestamp=as_of, sku_id=sku, location_id=loc, assigned_capacity=1.0,
+            reason="B0_Random", decision_id=decision_id,
             source_type=SourceType.SYNTHETIC,
         ))
     return rows, sku_to_loc
