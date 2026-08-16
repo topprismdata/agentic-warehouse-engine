@@ -97,15 +97,41 @@ def make_orders(
     orders_per_day_std: float,
     day_anchor: datetime,
     rng: random.Random,
+    sku_category: Dict[str, str] = None,
+    category_concentration: float = 0.0,
 ) -> Tuple[List[Order], List[OrderLine]]:
     """Generate N days of synthetic orders; known_at_time == order_time for v0.1.
 
-    SKU popularity follows a Zipf-like law: weight(rank) = 1/(rank+1)^1.2. This
+    SKU popularity follows a Zipf-like law: weight(rank) = 1/(rank+1)^1.5. This
     mirrors real FMCG pick-frequency concentration (spec §2.1 ABC insight) —
     without it, Static ABC cannot beat Random and the benchmark is meaningless.
+
+    Basket structure (spec §13.2 temporal affinity / Oracle C5 market-basket):
+      when sku_category is provided and category_concentration > 0, each order
+      draws a lead category, and each line comes from that category w.p.
+      `category_concentration`, else from the global Zipf. This produces
+      co-pick structure that affinity slotting (B3) can exploit; without it
+      B3 degenerates to B1 (uniform co-occurrence).
     """
     # Zipf-ish weights over sku order (sku_ids is sorted by construction)
     weights = [1.0 / ((i + 1) ** 1.5) for i in range(len(sku_ids))]
+
+    # Per-category Zipf weights for basket sampling
+    cat_members: Dict[str, List[str]] = {}
+    if sku_category:
+        for s in sku_ids:
+            cat_members.setdefault(sku_category.get(s, "CAT??"), []).append(s)
+    cat_weights = {
+        c: [1.0 / ((i + 1) ** 1.5) for i in range(len(m))]
+        for c, m in cat_members.items()
+    }
+    cat_names = list(cat_members.keys())
+
+    def draw_line(lead_cat: str) -> str:
+        if lead_cat and rng.random() < category_concentration:
+            m, w = cat_members[lead_cat], cat_weights[lead_cat]
+            return rng.choices(m, weights=w, k=1)[0]
+        return rng.choices(sku_ids, weights=weights, k=1)[0]
 
     orders, lines = [], []
     order_seq = 0
@@ -118,9 +144,9 @@ def make_orders(
             t = day_anchor + timedelta(days=d, hours=rng.uniform(8, 18))
             t = _aware(t)
             order_id = f"O{order_seq:06d}"
-            # 1–6 lines per order, sampled WITH replacement per Zipf weights
+            lead = rng.choice(cat_names) if cat_names else None
             line_count = rng.randint(1, 6)
-            chosen = rng.choices(sku_ids, weights=weights, k=line_count)
+            chosen = [draw_line(lead) for _ in range(line_count)]
             orders.append(Order(
                 order_id=order_id,
                 order_time=t,
