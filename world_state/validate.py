@@ -120,13 +120,24 @@ def validate_pipeline(world_state: Dict[str, List[Any]]) -> ValidationReport:
     """
     report = ValidationReport()
 
-    # Coverage check — all 9 canonical tables present (even if empty list)
+    # Coverage check — all 9 canonical tables present; core FACT tables must be
+    # non-empty. (v0.4 review H5: an all-empty world passed validation — the
+    # vacuous-pass variant of review F6. forecast/inventory MAY be empty when
+    # the track doesn't provide them — e.g. Instacart Track B has no stock —
+    # but orders/lines/sku/locations/assignments cannot.)
+    NON_EMPTY_REQUIRED = {"orders", "order_lines", "sku_master", "locations",
+                          "slot_assignment"}
     seen_tables = set(world_state.keys())
     for required in required_tables():
         if required not in world_state:
             report.hard_failures.append(f"required table missing: {required}")
         report.tables_seen.add(required)
-        report.record_counts[required] = len(world_state.get(required) or [])
+        n_rows = len(world_state.get(required) or [])
+        report.record_counts[required] = n_rows
+        if required in NON_EMPTY_REQUIRED and n_rows == 0:
+            report.hard_failures.append(
+                f"fact table {required} is empty — vacuous validation forbidden"
+            )
 
     if "orders" in world_state:
         _check_orders(world_state["orders"], report)

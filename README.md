@@ -11,7 +11,7 @@
 | 2 | `verify_gate.yaml` | ✅ | Stage 0 |
 | 3 | 主指标 `NormalizedCost` 口径 | ✅ partial | Stage 0 / 4 |
 | 4 | Canonical schema DDL | ✅ | Stage 1 |
-| 5 | Instacart/Favorita 接入 | ⬜(留 v0.2) | Stage 1 |
+| 5 | Instacart 接入(Favorita 留 v0.4) | ✅ R07(真实 basket 重排名) | Stage 1 |
 | 6 | SLAPStack layout 接入 | ⬜(留 v0.2) | Stage 1 |
 | 7 | Affinity 计算器 | ✅ R02 | Stage 2 |
 | 8 | Warehouse graph + travel-time | ◐ 欧氏 proxy + L1 时间;真实标定待 #6 | Stage 2 |
@@ -32,6 +32,7 @@
 | R02–R04 | affinity / CP-SAT / SimPy(全知协议) | 排名已撤回(违约+泄漏) |
 | **R05** | **诚实评估**:slot 1–7 天 / replay 8–14 天,容量审计 | **B4=0.8089** B3=0.8442 B2=0.9707 B0=1.6686(L0);L1: B4=0.9056 B3=0.9189 B0=1.2893;gates 全 PASS |
 | R06 | Execution Gateway stub(dry-run) | 8/8:四档风险路由 + 5 拒绝码 + §15.4 审计行 |
+| **R07** | **Instacart 真实 basket**(3000 users / top-120,user 级切分) | **B4=0.9115/0.7736** B3=0.9803/0.9251;真实浓度 0.23 vs 合成 0.70,B3 优势几乎消失,B4 稳定获胜 |
 
 ### 已固化的实验发现(经三轮自审修订)
 1. **世界必须有结构**(Zipf 频率 + basket 共现),否则基线无区分度(gate 抓到)
