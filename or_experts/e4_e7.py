@@ -133,7 +133,12 @@ def assign_e6_forecast_affinity(sku_ids, fc, affinity: AffinityGraph, pickable,
     m.Minimize(sum(terms))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_budget_s
+    # DETERMINISM (R11 review): wall-clock budget + multithreading made the
+    # same solve return different incumbents — beam search and its replay
+    # disagreed (0.2% cost mismatch). Benchmarks must be reproducible: single
+    # worker + deterministic-time budget.
+    solver.parameters.num_search_workers = 1
+    solver.parameters.max_deterministic_time = time_budget_s
     st = solver.Solve(m)
     if st not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("E6 infeasible")
@@ -195,7 +200,8 @@ def assign_e7_rolling_lite(sku_ids, fc, pickable, xyz_lookup, current_loc: Dict[
     m.Minimize(sum(terms))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_budget_s
+    solver.parameters.num_search_workers = 1
+    solver.parameters.max_deterministic_time = time_budget_s
     st = solver.Solve(m)
     if st not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise RuntimeError("E7 infeasible")

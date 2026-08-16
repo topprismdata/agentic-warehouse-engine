@@ -26,6 +26,11 @@ from evaluation.route_cost import total_route_cost
 from evaluation.audit import count_capacity_violations
 from or_experts.policies import EXPERT_IDS, StateView, run_policy
 
+# experts whose LAYOUT output does not depend on the incoming layout
+# (beam search caches these per period; E6/E7 are layout-dependent)
+LAYOUT_INDEPENDENT = ["E1_StaticABC", "E2_COI", "E3_Affinity",
+                      "E4_Forecast", "E5_Robust"]
+
 
 @dataclass
 class PeriodResult:
@@ -82,76 +87,190 @@ class SequentialBenchmark:
     def _hist_lines(self, upto: int) -> List[OrderLine]:
         return self._period_lines(0, upto)
 
-    # -- main roll -------------------------------------------------------------
+    # -- myopic rollout (shared preparation with beam search) ------------------
 
-    def run(self, seed_for_view: int = 0, log=None) -> BenchmarkResult:
-        # phases from the sequence (contiguous equal-phase day runs)
+    @dataclass
+    class PeriodPlan:
+        t: int
+        phase: str
+        lo: int
+        hi: int
+        view: StateView
+        period_lines: List[OrderLine]
+        mc_unit: float          # trajectory-INDEPENDENT (anchored on cold layout)
+
+    def _phases(self) -> List[Tuple[str, int, int]]:
         phases: List[Tuple[str, int, int]] = []
         for dp in self.seq:
             if phases and phases[-1][0] == dp.phase:
                 phases[-1] = (dp.phase, phases[-1][1], dp.day + 1)
             else:
                 phases.append((dp.phase, dp.day, dp.day + 1))
+        return phases
 
-        n_loc = len(self.locations)
-        results: List[PeriodResult] = []
-        violations: List[str] = []
+    def _prepare_periods(self, seed_for_view: int):
+        """Pre-compute views + move-cost units for all evaluated periods.
 
-        # cold-start incumbent: E1's layout after the FIRST phase (that phase
-        # is the warehouse's history — myopic path starts from its ABC layout)
+        mc_unit is anchored on the COLD-START layout's pick cost per period —
+        NOT on the myopic path's current layout. Anchor-independence is what
+        makes beam candidates comparable (caliber change vs R10's path-anchored
+        mc_unit; R11 reruns myopic under the anchored caliber so both numbers
+        come from ONE benchmark instance)."""
+        phases = self._phases()
         first_phase_end = phases[0][2]
         cold_hist = self._hist_lines(first_phase_end)
         cold_view = self._view(0, first_phase_end, cold_hist, self.seq[0], seed_for_view)
-        current = run_policy("E1_StaticABC", cold_view, {}, 0.0).layout
+        cold_layout = run_policy("E1_StaticABC", cold_view, {}, 0.0).layout
 
-        cum_alone: Dict[str, float] = {e: 0.0 for e in EXPERT_IDS}
-        prev_winner: Optional[str] = None
-        myopic_total = 0.0
-
+        plans = []
         for t, (phase, lo, hi) in enumerate(phases[1:], start=1):
-            # phase 0 is warm-up ONLY: its orders built the incumbent layout,
-            # evaluating on them too would be self-referential leakage
+            # phase 0 is warm-up ONLY (built the incumbent; evaluating on it
+            # would be self-referential leakage)
             period_lines = self._period_lines(lo, hi)
             hist = self._hist_lines(lo)
             dp = self.seq[lo]
             view = self._view(lo, hi, hist, dp, seed_for_view)
-
-            # unit move cost calibrated on this period's scale, scaled by the
-            # REGIME multiplier (v1.2 R6 — review W2: this was not wired, so
-            # move-cost-shock phases didn't actually raise relocation cost)
-            ref = total_route_cost(period_lines, current, self.xyz) or 1.0
+            ref = total_route_cost(period_lines, cold_layout, self.xyz) or 1.0
             mc_unit = self.mc_unit_ratio * ref * dp.move_cost_scale
+            plans.append(self.PeriodPlan(t=t, phase=phase, lo=lo, hi=hi,
+                                         view=view, period_lines=period_lines,
+                                         mc_unit=mc_unit))
+        return cold_layout, plans
 
+    def _eval_expert(self, plan, expert_id: str, current: Dict[str, str],
+                     prev_expert: Optional[str],
+                     layout_cache: Optional[Dict[str, Dict[str, str]]]):
+        """Single (period, expert, incoming-layout) evaluation.
+        Single accounting authority for myopic AND beam."""
+        if layout_cache is not None and expert_id in layout_cache:
+            layout = layout_cache[expert_id]
+        else:
+            layout = run_policy(expert_id, plan.view, current, plan.mc_unit).layout
+        pick = total_route_cost(plan.period_lines, layout, self.xyz)
+        n_moves = sum(1 for s in layout if current.get(s) != layout[s])
+        switch = 1.0 if (prev_expert is not None and expert_id != prev_expert) else 0.0
+        cost = (pick + self.lambda_move * n_moves * plan.mc_unit
+                + self.lambda_switch * switch * plan.mc_unit)
+        return cost, layout, n_moves
+
+    def run(self, seed_for_view: int = 0, log=None) -> BenchmarkResult:
+        current, plans = self._prepare_periods(seed_for_view)
+        n_loc = len(self.locations)
+        results: List[PeriodResult] = []
+        violations: List[str] = []
+        cum_alone: Dict[str, float] = {e: 0.0 for e in EXPERT_IDS}
+        prev_winner: Optional[str] = None
+        myopic_total = 0.0
+
+        for plan in plans:
+            cache = {e: run_policy(e, plan.view, current, plan.mc_unit).layout
+                     for e in LAYOUT_INDEPENDENT}
             costs, picks, moves, layouts = {}, {}, {}, {}
             for e in EXPERT_IDS:
-                dec = run_policy(e, view, current, mc_unit)
-                viol = count_capacity_violations(dec.layout, n_loc)
+                cost, layout, mv = self._eval_expert(plan, e, current, prev_winner, cache)
+                viol = count_capacity_violations(layout, n_loc)
                 if viol:
-                    violations.append(f"t={t} {e}: {len(viol)} capacity violations")
-                pick = total_route_cost(period_lines, dec.layout, self.xyz)
-                mv = dec.n_moves
-                switch = 1.0 if (prev_winner is not None and e != prev_winner) else 0.0
-                costs[e] = pick + self.lambda_move * mv * mc_unit \
-                    + self.lambda_switch * switch * mc_unit
-                picks[e], moves[e], layouts[e] = pick, mv, dec.layout
-                cum_alone[e] += costs[e]
+                    violations.append(f"t={plan.t} {e}: {len(viol)} capacity violations")
+                costs[e] = cost
+                picks[e] = total_route_cost(plan.period_lines, layout, self.xyz)
+                moves[e], layouts[e] = mv, layout
+                cum_alone[e] += cost
 
             winner = min(costs, key=costs.get)
             myopic_total += costs[winner]
             current = layouts[winner]
             prev_winner = winner
-            results.append(PeriodResult(t=t, phase=phase, costs=costs, picks=picks,
-                                        moves=moves, myopic_winner=winner,
+            results.append(PeriodResult(t=plan.t, phase=plan.phase, costs=costs,
+                                        picks=picks, moves=moves,
+                                        myopic_winner=winner,
                                         layout_after=current))
             if log:
-                log(f"  t={t} {phase:16s} winner={winner:12s} "
-                    + " ".join(f"{e.split('_')[0]}={costs[e]/ref:.3f}" for e in EXPERT_IDS))
+                ref = max(costs.values())
+                log(f"  t={plan.t} {plan.phase:16s} winner={winner:12s} "
+                    + " ".join(f"{e.split('_')[0]}={costs[e]/ref:.3f}"
+                                for e in EXPERT_IDS))
 
         fixed_best = min(cum_alone, key=cum_alone.get)
         return BenchmarkResult(periods=results, total_by_expert_alone=cum_alone,
                                myopic_total=myopic_total, fixed_best=fixed_best,
                                fixed_best_total=cum_alone[fixed_best],
                                violations=violations)
+
+    # -- dynamic oracle via beam search (T1) ------------------------------------
+
+    @dataclass
+    class BeamResult:
+        total_cost: float
+        trajectory: List[str]
+        per_period: List[dict] = field(default_factory=list)
+        beam_width: int = 0
+
+    def beam_search(self, beam_width: int = 30, seed_for_view: int = 0,
+                    log=None) -> "SequentialBenchmark.BeamResult":
+        """Approximate DYNAMIC ORACLE: beam over expert trajectories with full
+        path-dependent rollout.
+
+        The MYOPIC trajectory is injected as a guaranteed incumbent at every
+        level (it may otherwise be pruned), so beam-best ≤ myopic-total holds
+        EXACTLY. Since both are feasible trajectories, (myopic − beam) is a
+        CONSERVATIVE LOWER BOUND on the true dynamic-oracle gap: finding
+        beam < myopic by x% proves the oracle gap ≥ x%. A null result is
+        beam-limited, not proof of no gap (width sensitivity reported).
+        """
+        current, plans = self._prepare_periods(seed_for_view)
+        cands = [(0.0, (), current, None)]  # (cum, traj, layout, prev_expert)
+        # myopic incumbent (same evaluation authority as run())
+        my_layout = current
+        my_prev: Optional[str] = None
+        my_cum = 0.0
+        my_traj: List[str] = []
+
+        for plan in plans:
+            cache = {e: run_policy(e, plan.view, current, plan.mc_unit).layout
+                     for e in LAYOUT_INDEPENDENT}
+            # advance the myopic incumbent one step
+            my_costs = {e: self._eval_expert(plan, e, my_layout, my_prev, cache)[0]
+                        for e in EXPERT_IDS}
+            my_e = min(my_costs, key=my_costs.get)
+            cost_m, my_layout, _ = self._eval_expert(plan, my_e, my_layout, my_prev, cache)
+            my_cum += cost_m
+            my_traj.append(my_e)
+            my_prev = my_e
+
+            new_cands = []
+            for cum, traj, layout, prev in cands:
+                for e in EXPERT_IDS:
+                    cost, lay, mv = self._eval_expert(plan, e, layout, prev, cache)
+                    new_cands.append((cum + cost, traj + (e,), lay, e))
+            # guarantee the incumbent survives pruning
+            new_cands.append((my_cum, tuple(my_traj), my_layout, my_prev))
+            # dedup on trajectory (incumbent may duplicate a beam candidate)
+            seen = {}
+            for c in new_cands:
+                if c[1] not in seen or c[0] < seen[c[1]][0]:
+                    seen[c[1]] = c
+            cands = sorted(seen.values(), key=lambda c: c[0])[:beam_width]
+            if log:
+                log(f"  beam t={plan.t} {plan.phase:16s} best={cands[0][0]:.0f}")
+
+        total, traj, _, _ = min(cands, key=lambda c: c[0])
+        # replay winner for per-period records (deterministic — assert equality)
+        layout = current
+        prev = None
+        records = []
+        cum_check = 0.0
+        for plan, e in zip(plans, traj):
+            cache = {x: run_policy(x, plan.view, layout, plan.mc_unit).layout
+                     for x in LAYOUT_INDEPENDENT}
+            cost, layout, mv = self._eval_expert(plan, e, layout, prev, cache)
+            cum_check += cost
+            records.append({"t": plan.t, "phase": plan.phase, "expert": e,
+                            "cost": cost, "moves": mv})
+            prev = e
+        assert abs(cum_check - total) < 1e-6, f"beam replay mismatch {cum_check} vs {total}"
+        assert total <= my_cum + 1e-9, f"beam {total} > myopic {my_cum} — incumbent injection failed"
+        return self.BeamResult(total_cost=total, trajectory=list(traj),
+                               per_period=records, beam_width=beam_width)
 
     # -- state view ------------------------------------------------------------
 

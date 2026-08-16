@@ -139,7 +139,8 @@ def solve_cpsat(
     m.Minimize(sum(travel_terms) + lambda_affinity * rank_scale * sum(edge_terms))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_budget_s
+    solver.parameters.num_search_workers = 1
+    solver.parameters.max_deterministic_time = time_budget_s
     status_code = solver.Solve(m)
 
     if status_code not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
