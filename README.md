@@ -58,7 +58,7 @@ reconfigure" 核心命题;判据 = 事件依赖(保险型)框架。
 | T4 Trap 相图 | ✅ 完成(R16:trap 带=Δt1 中间导程,dynamic 廉价期预置) |
 | Anticipatory v2 | ⬜ 下一步(stop-count 内部模型,目标 capture>0) |
 
-阶段总结文档:`PROGRESS_v1.4.md`(T1.5/T3/T4 完成版)
+阶段总结文档:`PROGRESS_v1.5.md`(夜间 R17–R20 完成版)
 
 ## 工作规则(用户规定,长期有效)
 
