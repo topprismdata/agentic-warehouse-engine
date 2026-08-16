@@ -290,3 +290,63 @@ class SequentialBenchmark:
                          hist_span_days=span, fc=fc,
                          fc_known_promo=dp.promo_mult, aff=aff,
                          move_cost_scale=dp.move_cost_scale)
+
+    # -- trap analysis (SPEC v1.3 §2) ------------------------------------------
+
+    @dataclass
+    class TrapReport:
+        has_trap: bool
+        free_win: bool
+        divergence_t: Optional[int]          # first period where trajectories differ
+        divergence_phase: Optional[str]
+        current_sacrifice: float             # C_t^dyn - C_t^my at divergence (may be <0)
+        future_regret: float                 # sum_{t>div} (C_t^my - C_t^dyn)
+        trap_score: float                    # future_regret / current_sacrifice
+        gap: float                           # total relative gap
+        future_shock_phases: List[str]       # phases after divergence where regret accrues
+        myopic_periods: list = None          # attached for callers (avoid re-running)
+        dynamic_trajectory: list = None
+
+    def trap_analysis(self, beam_width: int = 30, seed_for_view: int = 0,
+                      tau: float = 2.0, log=None) -> "SequentialBenchmark.TrapReport":
+        """Compare myopic vs beam trajectories; locate the divergence point and
+        score the inter-temporal trade (SPEC v1.3 TrapScore)."""
+        my = self.run(seed_for_view=seed_for_view)
+        dy = self.beam_search(beam_width=beam_width, seed_for_view=seed_for_view)
+        keep = (my, dy)
+        my_costs = [pr.costs[pr.myopic_winner] for pr in my.periods]
+        dy_costs = [r["cost"] for r in dy.per_period]
+        my_traj = [pr.myopic_winner for pr in my.periods]
+        gap = (sum(my_costs) - sum(dy_costs)) / max(sum(my_costs), 1e-9)
+
+        # divergence: first t where the chosen expert differs
+        div = None
+        for t, (a, b) in enumerate(zip(my_traj, dy.trajectory)):
+            if a != b:
+                div = t
+                break
+        if div is None:
+            return self.TrapReport(has_trap=False, free_win=False, divergence_t=None,
+                                   divergence_phase=None, current_sacrifice=0.0,
+                                   future_regret=0.0, trap_score=0.0, gap=gap,
+                                   future_shock_phases=[],
+                                   myopic_periods=keep[0].periods,
+                                   dynamic_trajectory=keep[1].trajectory)
+
+        sacrifice = dy_costs[div] - my_costs[div]
+        regret = sum(my_costs[t] - dy_costs[t] for t in range(div + 1, len(my_costs)))
+        shock_phases = [my.periods[t].phase for t in range(div + 1, len(my_costs))
+                        if my_costs[t] - dy_costs[t] > 1e-9]
+        free_win = (sacrifice <= 0.0) and (regret > 0.0)
+        score = regret / sacrifice if sacrifice > 1e-9 else float("inf") if regret > 0 else 0.0
+        has_trap = sacrifice > 1e-9 and regret > sacrifice * tau
+        if log:
+            log(f"  trap: div@t={div}({my.periods[div].phase}) sacrifice={sacrifice:.0f} "
+                f"regret={regret:.0f} score={score:.2f} {'TRAP' if has_trap else ''}")
+        return self.TrapReport(has_trap=has_trap, free_win=free_win,
+                               divergence_t=div, divergence_phase=my.periods[div].phase,
+                               current_sacrifice=sacrifice, future_regret=regret,
+                               trap_score=score, gap=gap,
+                               future_shock_phases=shock_phases,
+                               myopic_periods=my.periods,
+                               dynamic_trajectory=dy.trajectory)

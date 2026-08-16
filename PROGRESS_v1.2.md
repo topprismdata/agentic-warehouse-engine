@@ -23,8 +23,10 @@ LLM 已降级为 selector family 候选之一(Step 7),不是论文主角。
 | 关卡 | 问题 | 判据(预声明) | 状态 |
 |------|------|--------------|------|
 | **T0 Expert Diversity** | 最优 Expert 是否随状态切换? | 无单一 Expert ≥80% 统治 + ≥3 distinct winners | ✅ **GO**(R10:E7 占 52%,6 个 distinct winner,切换与相位对齐) |
-| **T1 Myopic vs Dynamic Oracle** | 长期路径优化是否优于逐期贪婪? | GO=全 seeds gap≥2%;NO-GO=全 <0.5% | 🟡 **BORDERLINE**(R11,5 seeds:0.24/5.34/0.09/0.25/0.00%) |
-| **T2 Switch-cost Sensitivity** | λm/λs 变化是否改变最优 trajectory? | trajectory 的 moves/switches 随参数单调合理变化 | ⬜ 未开始 |
+| **T1a Existence** | myopic 被 dynamic 严格支配的序列存在? | constructive evidence | ✅ **YES**(seed 17:sac 80 → regret 2116,TrapScore 26.3) |
+| **T1b Prevalence** | trap 在多少条件下出现? | 分布形态(非均值 gate) | ✅ 完成(R12,12 seeds:保险型重尾;结构 9/12,material 1/12;divergence 集中在转变前夜) |
+| **T2 Sensitivity** | λm 如何调制规划价值? | 三张曲线 + 机制 | ✅ 完成(R13:左端低+中段峰(λm=10)+右端 plateau;高成本区"只搬最关键的") |
+| **T1.5 move vs switch** | C_move/C_switch 分别贡献? | 三条件分别跑 | ⬜ 未做(只跑了 move-only;REVIEW_v1.3 U 项记录) |
 
 ## 3. 已交付资产(12 commits,39 个 Python 模块,~6000 行)
 
