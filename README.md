@@ -15,7 +15,7 @@
 | 6 | SLAPStack layout 接入 | ⬜(留 v0.2) | Stage 1 |
 | 7 | Affinity 计算器 | ⬜ | Stage 2 |
 | 8 | Warehouse graph + travel-time | ⬜(用欧氏距离 proxy) | Stage 2 |
-| 9 | B0 Random + B1 Static ABC | ✅ | Stage 3 |
+| 9 | B0 Random + B1 Static ABC + B2 COI | ✅ | Stage 3 |
 | 10 | CP-SAT Dynamic Slotting | ⬜ | Stage 3 |
 | 11 | SimPy L1 replay | ⬜ | Stage 4 |
 | 12 | Execution Gateway stub | ⬜ | Stage 4 |

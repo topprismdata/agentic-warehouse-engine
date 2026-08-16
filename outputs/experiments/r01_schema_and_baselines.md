@@ -1,6 +1,6 @@
-# R01 — schema + baselines (B0 Random, B1 Static ABC)
+# R01 — schema + baselines (B0 Random, B1 Static ABC, B2 COI)
 
-**Date**: 2026-08-16T09:21:38.694548+00:00
+**Date**: 2026-08-16T09:22:23.645325+00:00
 **Seed**: 42
 **Spec**: FMCG_Agentic_Warehouse_Decision_Engine_v1.0.pdf
 

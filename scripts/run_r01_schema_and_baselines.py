@@ -338,7 +338,7 @@ def write_report(cfg, gates, report, expert_results, log: Logger):
     metric_cfg = gates["metric_gate"]["config"]
     rep_cfg = gates["reproducibility_gate"]["config"]
 
-    md = f"""# R01 — schema + baselines (B0 Random, B1 Static ABC)
+    md = f"""# R01 — schema + baselines (B0 Random, B1 Static ABC, B2 COI)
 
 **Date**: {datetime.now(timezone.utc).isoformat()}
 **Seed**: {cfg["runtime"]["seed"]}
