@@ -149,3 +149,36 @@ outputs/figures/t2_lambda_curves.png        # mean/median/max 三线
 outputs/figures/expert_winning_map.png      # phase × λm winner 图
 outputs/experiments/REVIEW_v1.3.md          # 三轮自审(U1–U5)
 ```
+
+---
+
+# 附录:v1.4 增量(2026-08-16 深夜,SPEC_UPDATE_v1.4 落地)
+
+## 新完成的三道"钉死"实验
+
+| 实验 | 问题 | 结果 |
+|------|------|------|
+| **R14 = T1.5** | 1[expert 换名] 罚是否是重配置成本的合格代理? | **不合格**:False Switch 0%,但 **Hidden Reconfig 17–69%**(λs=20 时 dynamic 靠"换内容不换名"规避罚)→ C_transition = d(layout) 公式化获硬证据 |
+| **R15 = T3 信息边界** | 可部署策略能捕获多少 oracle 机会? | **CaptureRate ≈ 0%**(aware 均值 −0.2%,blind 12/12 全 0);绑定约束 = 内部成本模型保真度。附带发现:seed 17 上 greedyFC < 事后 myopic(预测"懒惰"= 隐式 stickiness 规避 trap) |
+| **R16 = T4 Trap 相图** | 什么条件组合制造 myopic trap? | **Δt×M 网格**:trap 带在 **Δt=1 中间导程**(全 M material 1.26–1.69%),Δt≥2 衰减,Δt=0 仅 M=20;签名 = dynamic 廉价期预置,shock 期 moves 减半 |
+
+## 过程中抓到的重大缺陷(已修)
+
+- **Y1:beam oracle 非可采纳** —— 宽 20 的 oracle 弱于 greedyFC(seed 17:38106 > 36444);统一 width 30 重跑修复;制度化:oracle 宽度 = 全仓声明常量,beam 只保证 ≤ myopic。
+
+## 判据/叙事更新
+
+- 论文三层主线:机会存在(T1a/T4)→ **朴素部署捕获 ≈ 0(T3)** → 代理失真(T1.5);
+  研究前沿 = 内部模型保真度 + option-value hold("何时忍住")
+- 新指标已冻结:CaptureRate / NormalizedTrapGain / FalseSwitch / HiddenReconfig
+- 论文题目候选:**When Not to Reconfigure: Sequential Expert Routing for
+  Dynamic Warehouse Slotting under Non-Stationary Demand**
+
+## 下一步(优先级)
+
+1. **Anticipatory v2**(stop-count 感知内部模型 + H 扫描)—— 把 capture 从 ~0 拉正
+2. VPM / Marginal Move Quality(SPEC §6 欠账)+ R16 补 seeds
+3. WEPA-Natural / WEPA-Stress 双层验证
+4. Selector(cost-sensitive Ĉ(E_i|S_t) 预测)最后
+
+详见 `SPEC_UPDATE_v1.4.md` 与 `outputs/experiments/REVIEW_v1.4.md`。

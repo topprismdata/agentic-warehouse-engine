@@ -39,6 +39,11 @@ from ortools.sat.python import cp_model
 EXPERT_IDS = ["E1_StaticABC", "E2_COI", "E3_Affinity", "E4_Forecast",
               "E5_Robust", "E6_DDSR", "E7_Joint"]
 
+# experts whose LAYOUT output does not depend on the incoming layout
+# (beam search caches these per period; E6/E7 are layout-dependent)
+LAYOUT_INDEPENDENT = ["E1_StaticABC", "E2_COI", "E3_Affinity",
+                      "E4_Forecast", "E5_Robust"]
+
 
 @dataclass
 class StateView:

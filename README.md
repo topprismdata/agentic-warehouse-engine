@@ -53,7 +53,10 @@ reconfigure" 核心命题;判据 = 事件依赖(保险型)框架。
 | T1a Existence | ✅ YES(seed 17:sac 80→regret 2116,TrapScore 26.3) |
 | T1b Prevalence | ✅ 完成(R12:保险型重尾;material trap 1/12;divergence 集中在转变前夜) |
 | T2 Sensitivity | ✅ 完成(R13:左低+中峰(λm=10)+右 plateau;"只搬最关键的") |
-| T1.5 move vs switch | ⬜ 下一步 |
+| T1.5 move vs switch | ✅ 完成(R14:Hidden Reconfig 17–69%,指示罚不合格代理) |
+| T3 信息边界 | ✅ 完成(R15:**Capture≈0%**,绑定约束=内部模型保真度;Y1 修复 oracle 非可采纳) |
+| T4 Trap 相图 | ✅ 完成(R16:trap 带=Δt1 中间导程,dynamic 廉价期预置) |
+| Anticipatory v2 | ⬜ 下一步(stop-count 内部模型,目标 capture>0) |
 
 阶段总结文档:`PROGRESS_v1.3.md`
 

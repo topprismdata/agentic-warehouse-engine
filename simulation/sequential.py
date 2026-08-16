@@ -24,12 +24,7 @@ from features.affinity import compute_affinity
 from features.forecast import forecast_demand
 from evaluation.route_cost import total_route_cost
 from evaluation.audit import count_capacity_violations
-from or_experts.policies import EXPERT_IDS, StateView, run_policy
-
-# experts whose LAYOUT output does not depend on the incoming layout
-# (beam search caches these per period; E6/E7 are layout-dependent)
-LAYOUT_INDEPENDENT = ["E1_StaticABC", "E2_COI", "E3_Affinity",
-                      "E4_Forecast", "E5_Robust"]
+from or_experts.policies import EXPERT_IDS, LAYOUT_INDEPENDENT, StateView, run_policy
 
 
 @dataclass
