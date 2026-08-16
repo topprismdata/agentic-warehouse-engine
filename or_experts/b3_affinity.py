@@ -43,7 +43,12 @@ def assign_affinity(
     as_of: datetime,
     max_cluster: int = 4,
     affinity_threshold: float = 0.0,
+    location_capacity: int = None,
 ) -> Tuple[List[SlotAssignment], Dict[str, str]]:
+    """Capacity-aware affinity slotting. Clusters are placed at the NEAREST
+    location with remaining capacity (not round-robin), keeping co-picked SKUs
+    together while respecting the same hard capacity B4's solver sees."""
+    import math as _math
     freq: Dict[str, float] = defaultdict(float)
     for line in order_lines:
         freq[line.sku_id] += line.quantity
@@ -65,18 +70,28 @@ def assign_affinity(
     for sku in sorted(unassigned, key=lambda s: freq.get(s, 0.0), reverse=True):
         clusters.append([sku])
 
-    # --- 2. clusters occupy one location each, nearest first ----------------
+    # --- 2. clusters occupy nearest location with remaining capacity --------
     ranked_locs = sorted(pickable_locations, key=lambda l: _euclidean((l.x, l.y, l.z)))
+    if location_capacity is None:
+        location_capacity = max(1, _math.ceil(len(sku_ids) / len(ranked_locs)))
+    used = {l.location_id: 0 for l in ranked_locs}
     sku_to_loc: Dict[str, str] = {}
     rows: List[SlotAssignment] = []
-    for ci, cluster in enumerate(clusters):
-        loc = ranked_locs[ci % len(ranked_locs)]
+    for cluster in clusters:
+        placed = None
+        for l in ranked_locs:  # nearest-first with capacity
+            if used[l.location_id] + len(cluster) <= location_capacity:
+                placed = l
+                break
+        if placed is None:  # no single location fits the whole cluster → overflow to nearest
+            placed = min(ranked_locs, key=lambda l: used[l.location_id])
+        used[placed.location_id] += len(cluster)
         for sku in cluster:
-            sku_to_loc[sku] = loc.location_id
+            sku_to_loc[sku] = placed.location_id
             rows.append(SlotAssignment(
                 timestamp=as_of,
                 sku_id=sku,
-                location_id=loc.location_id,
+                location_id=placed.location_id,
                 assigned_capacity=float(len(cluster)),
                 reason="B3_Affinity",
                 decision_id=decision_id,
