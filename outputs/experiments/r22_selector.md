@@ -36,3 +36,9 @@ demand_cv, demand_trend, top10_share, promoted_share, fc_p50_sum, fc_uncertainty
 - 56 训练期太小,学不出超越"E7 全局最优"的结构
 - Paper 1 贡献 ≠ "selector 有效";贡献 = **"selector 何时值得做"**
 - 与 WEPA-Natural(gap=0)共同构成"DWERP 部署边界"的证据
+
+
+## LLM 补充(R23, zero-shot llama3.2:1b)
+- S5 LLM: total=150122  regret=11.38%  top1=25.0%
+- 与 S1 FixedBest 相比:总成本 +10,280 (更差) → 与 R22 部署悖论一致
+- 1B 模型坍缩到同一排名(E1, E3, E4, E5, E2, E6):模型过小无法从 prompt 提取信号

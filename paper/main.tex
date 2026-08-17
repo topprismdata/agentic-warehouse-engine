@@ -798,4 +798,217 @@ J.~R. Rice.
 
 \end{thebibliography}
 
+\appendix
+
+\section{Detailed Experiment Tables}
+\label{sec:appendix}
+
+This appendix consolidates the per-experiment tables behind the headline
+findings. See \texttt{outputs/experiments/} for the source markdown reports
+and the full \texttt{SPEC\_UPDATE\_v1.5.md} for the research protocol.
+
+\subsection{T0 Expert Diversity (R10, 3 seeds $\times$ 7 phases)}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{rrl lrr}
+\toprule
+seed & t & phase & winner (short) & moves & source \\
+\midrule
+7  & 1 & promo\_ramp     & E1 & 0   & R10 \\
+7  & 2 & promo\_peak     & E3 & 61  & R10 \\
+7  & 3 & promo\_decay    & E7 & 76  & R10 \\
+7  & 4 & stable2         & E1 & 106 & R10 \\
+7  & 5 & reversal        & E7 & 64  & R10 \\
+7  & 6 & affinity\_shift  & E7 & 93  & R10 \\
+7  & 7 & move\_cost\_shock & E7 & 16  & R10 \\
+17 & 1 & promo\_ramp     & E1 & 0   & R10 \\
+17 & 2 & promo\_peak     & E5 & 113 & R10 \\
+17 & 3 & promo\_decay    & E4 & 96  & R10 \\
+17 & 4 & stable2         & E6 & 70  & R10 \\
+17 & 5 & reversal        & E7 & 64  & R10 \\
+17 & 6 & affinity\_shift  & E3 & 117 & R10 \\
+17 & 7 & move\_cost\_shock & E7 & 55  & R10 \\
+27 & 1 & promo\_ramp     & E7 & 16  & R10 \\
+27 & 2 & promo\_peak     & E7 & 65  & R10 \\
+27 & 3 & promo\_decay    & E7 & 79  & R10 \\
+27 & 4 & stable2         & E6 & 76  & R10 \\
+27 & 5 & reversal        & E7 & 63  & R10 \\
+27 & 6 & affinity\_shift  & E1 & 110 & R10 \\
+27 & 7 & move\_cost\_shock & E7 & 13  & R10 \\
+\bottomrule
+\end{tabular}
+\caption{T0 winners by phase across 3 seeds. Modal winners:
+move\_cost\_shock $\to$ E7 (100\%), reversal $\to$ E7 (83\%), promo\_peak
+$\to$ E7/E3/E4 split. \label{tab:r10}}
+\end{table}
+
+\subsection{T1 Myopic vs BFIP (R11, 5 seeds, beam 30)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r r r r r}
+\toprule
+seed & myopic & beam(30) & gap & moves (my/dy) \\
+\midrule
+7  & 30,597 & 30,523 & 0.24\% & 415/437 \\
+17 & 38,106 & 36,070 & \textbf{5.34\%} & 515/460 \\
+27 & 31,794 & 31,766 & 0.09\% & 422/423 \\
+37 & 33,263 & 33,180 & 0.25\% & 427/424 \\
+47 & 36,054 & 36,054 & 0.00\% & 506/506 \\
+\midrule
+\multicolumn{5}{c}{\emph{mean gap = 1.18\%; seed 17 sole material trap (TrapScore 26.3)}} \\
+\bottomrule
+\end{tabular}
+\caption{T1 oracle: myopic vs beam-30. See R11 report for full
+trajectories. \label{tab:r11}}
+\end{table}
+
+\subsection{T1b Prevalence (R12, 12 seeds, distribution detail)}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{rrrrrr r}
+\toprule
+seed & gap & div@t & div phase & sacrifice & regret & TrapScore \\
+\midrule
+7   & 0.00\% & ---   & ---       & ---   & ---   & ---   \\
+17  & 5.34\% & 5     & affinity  & 80    & 2116  & 26.33 \\
+27  & 0.00\% & ---   & ---       & ---   & ---   & ---   \\
+37  & 0.25\% & 3     & stable2   & 22    & 105   & 4.81  \\
+47  & 0.00\% & ---   & ---       & ---   & ---   & ---   \\
+57  & 0.11\% & 3     & stable2   & 18    & 55    & 3.15  \\
+67  & 0.28\% & 3     & stable2   & 5     & 109   & 22.70 \\
+77  & 0.22\% & 0     & promo\_ramp & 27  & 100   & 3.65  \\
+87  & 0.02\% & 3     & stable2   & 33    & 42    & 1.27  \\
+97  & 0.33\% & 0     & promo\_ramp & 17  & 115   & 6.68  \\
+107 & 0.40\% & 0     & promo\_ramp & 48  & 208   & 4.28  \\
+117 & 1.16\% & 0     & promo\_ramp & 12  & 384   & 32.09 \\
+\midrule
+\multicolumn{7}{c}{\emph{10/12 gap $\approx$ 0; 2 seeds with material trap (17, 117).
+Insurance-shaped distribution.}} \\
+\bottomrule
+\end{tabular}
+\caption{T1b: 12 seeds. Material traps at promo\_ramp $\to$ stable2
+transition; sacrifice typically small, but seed 17 and 117 show that
+compounding multi-period effects can produce large regret. \label{tab:r12}}
+\end{table}
+
+\subsection{T2 Sensitivity Curve (R13, 9 lambdas $\times$ 3 seeds)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{rrrr}
+\toprule
+$\lambda_m$ & mean gap & mean moves & mean switches \\
+\midrule
+0.0  & 0.10\% & 635 & 5.0 \\
+0.25 & 0.09\% & 579 & 5.0 \\
+0.5  & 0.22\% & 572 & 4.3 \\
+1.0  & 0.19\% & 564 & 5.0 \\
+2.0  & 0.42\% & 499 & 4.3 \\
+5.0  & 0.11\% & 360 & 2.0 \\
+10.0 & 1.26\% & 305 & 2.3 \\
+20.0 & 1.00\% & 249 & 2.7 \\
+50.0 & 1.16\% & 167 & 1.7 \\
+\bottomrule
+\end{tabular}
+\caption{T2: left-low, mid-peak ($\lambda_m=10$), right-plateau.
+Mean gap does not converge to zero at high $\lambda_m$: dynamic moves
+more but better. \label{tab:r13}}
+\end{table}
+
+\subsection{T4 Trap Phase Diagram (R16, 4$\times$4 grid, 2 seeds)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{c rrrr}
+\toprule
+$\Delta t$ & $\times 2$ & $\times 5$ & $\times 10$ & $\times 20$ \\
+\midrule
+0 & 0.36\% & 0.08\% & 0.31\% & \textbf{1.34\%} \\
+1 & \textbf{1.26\%} & \textbf{1.48\%} & \textbf{1.69\%} & \textbf{1.58\%} \\
+2 & 0.25\% & 0.71\% & 0.56\% & 0.84\% \\
+4 & 0.13\% & 0.20\% & 0.20\% & 0.10\% \\
+\bottomrule
+\end{tabular}
+\caption{T4 trap grid: trap band at $\Delta t=1$ (all magnitudes material);
+$\Delta t \geq 2$ decays. \label{tab:r16}}
+\end{table}
+
+\subsection{R17 Attribution (model $\times$ horizon)}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{l l r r r}
+\toprule
+model & H & $\rho$ & Top-1 & Capture \\
+\midrule
+L1\_linear    & 2 (aware) & +0.75 & 43\% & +43.4\% \\
+L1\_linear    & 2 (blind) & +0.73 & 39\% & +43.4\% \\
+L2\_stopaware & 2 (aware) & +0.52 & 43\% & +4.4\% \\
+L2\_stopaware & 2 (blind) & +0.52 & 43\% & -59.1\% \\
+L3\_route     & 2 (aware) & +0.62 & 43\% & +24.6\% \\
+L3\_route     & 2 (blind) & +0.62 & 43\% & +24.6\% \\
+\bottomrule
+\end{tabular}
+\caption{R17: capture is NOT monotonic in model fidelity. Cruder models
+have higher capture. Awareness vs blindness has small effect for L1/L3;
+large effect for L2. \label{tab:r17}}
+\end{table}
+
+\subsection{R20 VPM (7 lambdas, 3 seeds)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r r r r}
+\toprule
+$\lambda_m$ & moves my & VPM$_{\text{my}}$ & VPM$_{\text{dy}}$ \\
+\midrule
+0.5  & 572 & $-0.9$  & $\mathbf{-0.8}$  \\
+1.0  & 564 & $-2.0$  & $\mathbf{-2.0}$  \\
+2.0  & 499 & $-4.7$  & $\mathbf{-4.2}$  \\
+5.0  & 360 & $-11.7$ & $\mathbf{-11.4}$ \\
+10.0 & 305 & $-21.5$ & $\mathbf{-20.1}$ \\
+20.0 & 249 & $-39.3$ & $\mathbf{-36.5}$ \\
+50.0 & 163 & $-89.5$ & $\mathbf{-84.0}$ \\
+\bottomrule
+\end{tabular}
+\caption{R20: VPM$_{\text{dynamic}} >$ VPM$_{\text{myopic}}$ at all 7 $\lambda_m$
+levels; gap widens monotonically ($+0.1 \to +5.5$). Absolute VPM negative
+(vs never-move) at high $\lambda_m$. \label{tab:r20}}
+\end{table}
+
+\subsection{R22+R23 Selector Family (4 seeds $\times$ 7 periods)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l l r r r}
+\toprule
+Selector & type & total cost & regret & Top-1 \\
+\midrule
+S0 Oracle & (upper bound) & 138,296 & 0.00\% & 100.0\% \\
+S1 FixedBest & rule-of-thumb & 139,842 & 1.43\% & 46.4\% \\
+S2 Rule & hand-coded & 140,377 & 1.26\% & 35.7\% \\
+S3 XGBoost & learned & 140,204 & 1.87\% & 39.3\% \\
+S4 MLP & learned & 140,248 & 2.23\% & 25.0\% \\
+S5 LLM (1B zero-shot) & neural LM & 150,122 & 11.38\% & 25.0\% \\
+\bottomrule
+\end{tabular}
+\caption{Selector family: no learned selector beats Fixed-Best. The
+1B LLM is the worst (collapsed to a fixed ranking). Selector value is
+bounded by training-data regime coverage. \label{tab:r22}}
+\end{table}
+
+\noindent\emph{Full per-seed tables are available in the supplementary
+material (\texttt{outputs/experiments/}).}
+
 \end{document}
