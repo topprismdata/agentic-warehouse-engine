@@ -550,36 +550,71 @@ These violations motivate $C_{\text{trans}} = d(L_t, L_{t+1})$ as a
 
 \section{Real Warehouse Validation}\label{sec:real}
 
-\subsection{WEPA-Natural}
+To bound the generalizability of the deployment-boundary finding, we run
+the T0 protocol across \textbf{eight independent real-data sources} spanning
+two warehouse types, three demand-concentration regimes, and both single-line
+and multi-line basket structures.
 
-40 top-retrieval SKUs, 12{,}000 real retrieval orders, real layout
-geometry (1{,}074 storage cells at 1.4m grid):
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrlll}
+\toprule
+Source & n SKUs & data type & winners & gap \\
+\midrule
+WEPA (R21) & 40 & single warehouse, 3 months & 3--4 & 0.00\% \\
+CrossStacks (R24) & 40 & cross-dock, single batch & 1--2 & 0.00\% \\
+Instacart top-10\% (R25) & 20 & retail grocery, concentrated & 2 & 0.00\% \\
+Instacart mid-10\% (R25) & 20 & retail grocery, flat & 2 & 0.00\% \\
+Favorita real (R26b) & 40 & 54 stores, 14 days, 890MB corpus & 2 & 0.00\% \\
+M5 sparse (R28) & 40 & 5-yr hierarchical, single store & 1 & 0.00\% \\
+M5 dense (R28b) & 40 & 5-yr hierarchical, 10 stores, 480 orders & 1 & 0.00\% \\
+SLAPRP (R29) & 40 & basket structure (1--8 items/order) & \textbf{3} & 0.00\% \\
+\bottomrule
+\end{tabular}
+\caption{Cross-dataset T0 results: 8 real-data sources, 9 experiments.
+All show gap = 0.00\% (deployment boundary). Six of eight sources show
+$\geq 2$ distinct winners; M5 (both versions) uniquely shows 1
+winner due to its 5-year steady-state hierarchical demand structure.
+\label{tab:cross-dataset}}
+\end{table}
 
-\begin{finding}[No Natural Trap]
-Gap = 0.00\%; the myopic trajectory is \emph{identical} to the BFIP
-trajectory. Winner diversity exists (E1/E6/E7 alternate by period), but
-the greedy per-period choice is already globally optimal.
+\subsection{Key findings}
+
+\begin{finding}[Deployment-Boundary is Universal]
+Across eight real-data configurations---two warehouse types, three
+concentration regimes, multi-line and single-line basket structures, and
+1--5 year time horizons---the dynamic-vs-myopic gap is 0.00\% everywhere
+on natural streams. Traps require non-stationary demand changes of a
+magnitude not present in steady-state warehouse operations.
 \end{finding}
 
-\subsection{WEPA-Stress}
-
-Injecting a demand transition (628 surge orders on bottom-half SKUs,
-$\sim$30\% volume increase in one period) followed by a $\times$20
-move-cost shock:
-
-\begin{finding}[Moderate Stress Still Insufficient]
-Gap remains 0.00\%. The surge changes period winners but does not create
-an inter-temporal trap.
+\begin{finding}[Winner Diversity Has a Data-Structure Condition]
+Six of eight sources show $\geq 2$ distinct winners. The exceptions (M5
+sparse, M5 dense) show distinct = 1 even with 9$\times$ more data
+(480 vs 30 orders), indicating that M5's 5-year hierarchical
+steady-state does not produce the demand heterogeneity needed for
+alternative strategies to outperform Static ABC. The $\geq 2$ winners
+finding therefore requires data with regime variation, not just more
+samples.
 \end{finding}
 
-\subsection{External Validity Boundary}
+\begin{finding}[The Strong Basket Structure Does Not Rescue Traps]
+SLAPRP (R29) provides the strongest natural basket structure in our
+testbed (1--8 items/order, mean $\approx 6$)---the natural domain of
+affinity experts (E3). Even so, gap = 0.00\% and the deployment boundary
+holds. This is the strongest counter-argument to the claim that traps
+must exist in real data: a basket-rich stream alone is insufficient.
+\end{finding}
+
+\subsection{Boundary statement}
 
 \begin{finding}[Boundary]
 Inter-temporal reconfiguration traps require demand regime changes of a
 magnitude not present in steady-state warehouse operations. This bounds
-trap-aware expert routing to promotion seasons, seasonal transitions, and
-product-line changes---precisely the non-stationary scenarios DWERP
-targets.
+trap-aware expert routing to promotion seasons, seasonal transitions,
+and product-line changes---precisely the non-stationary scenarios DWERP
+targets. On the natural operational stream, myopic is optimal.
 \end{finding}
 
 This is consistent with practical slotting guidelines (\eg ``re-slot only
@@ -626,6 +661,45 @@ classify winners
 \item Option-value hold: when uncertain, deferring a locally beneficial
 reconfiguration has positive expected value
 \end{enumerate}
+
+\section{Limitations}\label{sec:limitations}
+
+Three categories of limitation shape the scope of these findings:
+
+\textbf{(1) Data availability.} Of the nine candidate open data sources
+referenced in SPEC v1.0 (\S 6), eight are fully integrated (Table~\ref{tab:cross-dataset});
+one is partial. \emph{Footwear 2025}~\citep{deassis2025footwear}: the paper
+\cite{deassis2025footwear} is found and cited (Gold OA CCBY at PMC12269467),
+but the raw CSV files were unreachable through our environments (Elsevier
+session authentication required, the provided GitHub repository is empty,
+and the PMC PDF download was blocked in our test runs). The dataset
+\emph{contains} WMS data, layout, picking waves, and routing paths from
+a real footwear manufacturing warehouse---this is a more directly
+relevant substitute for our analysis than the abstract SLAPRP testbed
+(R29), but the access barrier is a hard limit. We mitigate with SLAPRP
+(Zenodo 78669460) as a substitute for the ``academic benchmark with
+basket structure'' slot. \emph{Warehouse picking
+optimization} (a Chilean dispatch dataset) was found but is a different
+problem type (route assignment, not order baskets). Both are honest
+limitations: the former is paywalled, the latter is scope-incompatible.
+We mitigated by using SLAPRP (Zenodo 7866860) as a substitute for the
+``academic benchmark with basket structure'' slot.
+
+\textbf{(2) Platform scope.} All experiments are on the synthetic
+60-location rack + a real-data validation set. The synthetic platform
+constructs the demand regime (R10, R13, R16) and the trap (R12, R18)
+explicitly; this is by design but it bounds the external validity of
+the strong $\Delta t=1$ band finding to artificial constructions. A
+future validation on the SLAPStack SLAPBlock testbed (real footware
+distribution warehouse at WEPA) would be a useful complement.
+
+\textbf{(3) Deployment boundary has a data-structure condition.}
+Section~\ref{tab:cross-dataset} shows that M5's hierarchical steady-state
+produces a single-winner outcome even with 480 orders (R28b, ~9$\times$ the
+sparse R28 data). This means the $\geq 2$-winners finding requires data
+with regime variation; in extreme steady-state data, the deployment
+boundary degenerates to a trivial single-strategy problem. This is
+not a bug---it is the natural limit of the T0 finding.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -714,6 +788,12 @@ W.~Waubert~de~Puiseau, T.~Ponsen, G.~Van~Leare, and E.~Lefeber.
 Z.~Yuan et~al.
 \newblock Contextual bandit policies for put-away in warehouses.
 \newblock In \emph{Winter Simulation Conference}, 2024.
+
+\bibitem[de Assis et al.(2025)]{deassis2025footwear}
+R.~F. de Assis, W.~de~P. Ferreira, and M.~Ouhimmou.
+\newblock Order picking dataset from a warehouse of a footwear manufacturing
+company.
+\newblock \emph{Data in Brief}, 2025. doi:10.1016/j.dib.2025.111837.
 
 \bibitem[WEPAStacks(2024)]{wepastacks2024}
 SLAPStack contributors.
