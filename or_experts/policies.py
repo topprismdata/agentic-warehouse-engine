@@ -179,7 +179,7 @@ def e7_joint(view: StateView, current: Dict[str, str],
         return d
     _, m = _e7(view.sku_ids, view.fc, view.locations, view.xyz, current,
                "DP-E7", datetime.now(timezone.utc),
-               move_cost=move_cost_units, time_budget_s=15.0)
+               move_cost=move_cost_units, time_budget_s=0.5)
     return _wrap("E7_Joint", current, m)
 
 

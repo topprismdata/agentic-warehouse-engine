@@ -25,3 +25,6 @@ venv/
 # mlflow
 mlruns/
 mlflow.db
+data/raw/favorita/
+data/raw/m5/
+data/raw/footwear/

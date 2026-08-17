@@ -165,3 +165,65 @@ def build_canonical(
         n_storage=len(storage), n_retrievals=len(retrievals),
         n_top_skus=top_n_skus,
     )
+
+
+# --- CrossStacks adapter --------------------------------------------------
+
+def _find_crossstacks_path() -> Path:
+    import slapstack
+    return Path(slapstack.__file__).parent / "use_cases" / "crossstacks"
+
+
+def build_crossstacks_canonical(
+    top_n_skus: int = 80,
+    max_orders: int = 15000,
+    n_days: int = 14,
+) -> Dict:
+    """CrossStacks: 1,952 storage cells, 8,401 SKUs, 16,802 orders
+    (balanced delivery/retrieval — true cross-docking pattern)."""
+    base = _find_crossstacks_path()
+    loc_map, n_rows, n_cols = load_layout(base)
+    storage = _get_storage_locs(loc_map)
+    if len(storage) < top_n_skus:
+        raise ValueError(f"CrossStacks has only {len(storage)} storage cells")
+
+    all_orders = load_orders(base, max_orders=max_orders * 2)
+    retrievals = [o for o in all_orders if o[0] == "retrieval"]
+    sku_freq = Counter(o[1] for o in retrievals)
+    top_skus = [s for s, _ in sku_freq.most_common(top_n_skus)]
+    sku_set = set(top_skus)
+    retrievals = [o for o in retrievals if o[1] in sku_set][:max_orders]
+
+    sku_ids = [f"X{i:05d}" for i in range(top_n_skus)]
+    sku_id_of = {orig: sid for orig, sid in zip(top_skus, sku_ids)}
+
+    locations = []
+    xyz = {}
+    for i, (r, c) in enumerate(storage[:top_n_skus * 2]):
+        x = round(c * 1.4 + 0.7, 2); y = round(r * 1.4 + 0.7, 2); z = 0.0
+        loc_id = f"CS-{i:04d}"
+        from .schemas import Location, ZoneType
+        loc = Location(location_id=loc_id, zone=ZoneType.FORWARD_PICK,
+                       aisle=0, bay=r, level=c, x=x, y=y, z=z,
+                       capacity_volume_m3=2.0, capacity_weight_kg=200.0,
+                       pickable=True, source_type=SourceType.OBSERVED)
+        locations.append(loc); xyz[loc_id] = (x, y, z)
+
+    orders, lines = [], []
+    for seq_i, o in enumerate(retrievals):
+        action, sku_orig, ts, src, sink, qty = o
+        oid = f"X{seq_i:07d}"
+        day_offset = int(ts) % n_days if isinstance(ts, (int, float)) and ts > 0 else seq_i % n_days
+        t = ANCHOR + timedelta(days=day_offset, hours=8 + (seq_i % 10))
+        orders.append(Order(order_id=oid, order_time=t, known_at_time=t,
+                            channel="retrieval", cutoff=t + timedelta(hours=4),
+                            priority=0, wave_id=None, source_type=SourceType.OBSERVED))
+        lines.append(OrderLine(order_id=oid, sku_id=sku_id_of[sku_orig],
+                               quantity=float(qty), uom="pallet", pick_sequence=1,
+                               source_type=SourceType.OBSERVED))
+
+    return dict(sku_ids=sku_ids, sku_orig_to_canonical=sku_id_of,
+                locations=locations, xyz=xyz, anchor=ANCHOR,
+                orders=orders, lines=lines,
+                n_storage=len(storage), n_retrievals=len(retrievals),
+                n_top_skus=top_n_skus)

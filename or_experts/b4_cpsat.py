@@ -66,7 +66,7 @@ def solve_cpsat(
     pickable_locations: List[Location],
     xyz_lookup: Dict[str, Tuple[float, float, float]],
     lambda_affinity: float = 0.5,
-    time_budget_s: float = 10.0,
+    time_budget_s: float = 0.1,
     max_candidates_per_sku: int = 100,
     location_capacity: Optional[int] = None,
     verbose: bool = False,

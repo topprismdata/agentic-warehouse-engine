@@ -84,7 +84,7 @@ def assign_e5_robust(sku_ids, fc: Dict[str, SkuForecast], pickable, decision_id,
 def assign_e6_forecast_affinity(sku_ids, fc, affinity: AffinityGraph, pickable,
                                 xyz_lookup, decision_id, as_of,
                                 lambda_affinity: float = 0.3,
-                                time_budget_s: float = 20.0,
+                                time_budget_s: float = 0.1,
                                 fmax_ref: float = None):
     """fmax_ref: STABLE normalization (e.g. max historical frequency). If the
     regime input (promotion x8) inflates the in-model max, every other SKU's
@@ -163,7 +163,7 @@ def assign_e6_forecast_affinity(sku_ids, fc, affinity: AffinityGraph, pickable,
 def assign_e7_rolling_lite(sku_ids, fc, pickable, xyz_lookup, current_loc: Dict[str, str],
                            decision_id, as_of,
                            move_cost: float = 0.0,
-                           time_budget_s: float = 20.0):
+                           time_budget_s: float = 0.1):
     """Single-window reduction of rolling-horizon: minimize expected pick cost
     PLUS move_cost per changed assignment (ABSOLUTE magnitudes — no fmax
     normalization, which under promotion scaled every travel term down 8x and

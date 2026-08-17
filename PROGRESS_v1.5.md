@@ -41,6 +41,10 @@ Warehouse Policy / **Reconfiguration Deferral**(非 "waiting")
 | **R19** | **度量性质** | d(L,L) 合法度量? | 对称✓ 三角✓ → MTS 可挂靠;4 类特异性违反 |
 | **R20** | **VPM** | 搬库选择性? | VPM_dy>VPM_my 全 7 档,差值随 λm 扩大 |
 | **R21** | **WEPA-Natural/Stress** | 真实仓上 trap 存在? | **❌ gap=0.00%(myopic=BFIP=optimal)**:自然数据太平滑,trap 需极端 regime |
+| **R24** | **CrossStacks** | 第二个独立仓验证 | **❌ gap=0.00%,1-2 winners**:部署边界不限于 WEPA |
+| **R25** | **Instacart 浓度切片** | 高 vs 中浓度子集 | top-10%:2 winners;mid-10%:2 winners;均 gap=0% |
+| **R26** | **Favorita 代理** | 极端浓度(Zipf 0.7) | gap=0%,2 winners;Kaggle 限速仅得 1MB |
+| **R27** | **数据可获得性报告** | 4 个未完全接入源 | Favorita proxy / M5 未试 / SLAPRP 不可用 / Footwear 404 |
 
 ## 3. 夜间四实验的统一叙事(R17–R20)
 
