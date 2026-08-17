@@ -11,8 +11,8 @@
 | 3 | CrossStacks (slapstack) | 1,952 cells, 16,802 orders | CC0 (PyPI package) | ✅ Fully loaded | R24 |
 | 4 | Favorita Grocery Sales | 890MB (full) | Unknown (Kaggle) | ✅ **FULL via new credentials**(top-40 items, 54 stores × 14d) | R26b |
 | 5 | M5 Walmart Hierarchical | 47MB (parquet mirror) | CC0 (Kaggle) | ✅ **FULL via new credentials** | R28 |
-| 6 | SLAPRP | Academic benchmark | Open (OR-Library style) | ❌ Not attempted (no Kaggle/PyPI presence) | — |
-| 7 | Footwear Picking 2025 (Mendeley) | ~Academic | Open | ❌ Not attempted (Mendeley 404, Google captcha) | — |
+| 6 | SLAPRP | Zenodo 7866860 (CC0) | Open | ✅ **FULL via Zenodo**(Prunet et al. 2025) | R29 |
+| 7 | Footwear Picking 2025 (Mendeley) | Data in Brief | CC-BY-4.0 | ⚠️ Paper found, raw data behind Elsevier auth wall | (cited) |
 
 ## Cross-dataset T0 summary (R21, R24, R25, R26)
 

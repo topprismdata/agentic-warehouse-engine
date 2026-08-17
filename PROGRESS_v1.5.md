@@ -46,8 +46,10 @@ Warehouse Policy / **Reconfiguration Deferral**(非 "waiting")
 | **R26b** | **Favorita 真实** | 54 门店×14d,890MB 真实数据 | gap=0%,2 winners;替换 R26 代理 |
 | **R27** | **数据可获得性报告** | 4 个未完全接入源 | **R28 后已更新**:M5 ✅ / Footwear ❌ / SLAPRP ❌ |
 | **R28** | **M5 Walmart 真实** | 5-yr hierarchical, 47MB parquet | **gap=0%, 1 winner**(稀疏, 数据量限制) |
+| **R29** | **SLAPRP 真实** | Zenodo 7866860, **basket structure 1-8 items/order** | gap=0%, 3 winners — **first dataset with real affinity signal** |
 | **R27** | **数据可获得性报告** | 4 个未完全接入源 | **R28 后已更新**:M5 ✅ / Footwear ❌ / SLAPRP ❌ |
 | **R28** | **M5 Walmart 真实** | 5-yr hierarchical, 47MB parquet | **gap=0%, 1 winner**(稀疏, 数据量限制) |
+| **R29** | **SLAPRP 真实** | Zenodo 7866860, **basket structure 1-8 items/order** | gap=0%, 3 winners — **first dataset with real affinity signal** |
 
 ## 3. 夜间四实验的统一叙事(R17–R20)
 
