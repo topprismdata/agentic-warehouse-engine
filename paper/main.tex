@@ -1,0 +1,656 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage[round]{natbib}
+\usepackage{subcaption}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{finding}{Finding}
+\newcommand{\eg}{e.g.,\ }
+\newcommand{\ie}{i.e.,\ }
+
+\title{When Not to Reconfigure: Sequential Expert Routing for\\
+Dynamic Warehouse Slotting under Non-Stationary Demand}
+
+\author{%
+  Anonymous\\
+  \texttt{(under review)}
+}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Dynamic slotting in fast-moving consumer goods (FMCG) warehouses is
+typically optimized per-period or over short rolling horizons, treating
+each re-slotting decision as independent of its predecessors. We show that
+this myopic approach can be globally suboptimal when physical
+reconfiguration costs create inter-temporal coupling: a locally beneficial
+reconfiguration made before a demand or cost shock can lock the warehouse
+into expensive future adjustments. We formalize this as the
+\emph{Dynamic Warehouse Expert Routing Problem} (DWERP), a
+warehouse-specific instance of switching-cost online optimization in which
+a library of operations research (OR) experts proposes slotting actions
+each period, and the decision is which expert to follow. Through
+controlled experiments validated against exact enumeration on small
+instances, we characterize the conditions under which myopic expert
+selection fails: inter-temporal traps concentrate at intermediate lead
+times before cost shocks (1.26--1.69\% normalized trap gain), the
+full-information opportunity is modest ($\sim$1--5\%) but reproducible, and
+traps are entirely absent without cost shocks. Counter-intuitively,
+deployable receding-horizon policies with crude internal cost models
+capture most of this opportunity not by forecasting better, but by being
+conservative---model imprecision acts as implicit stickiness that avoids
+over-reconfiguration. We empirically demonstrate that algorithm-switch
+counts are an inadequate surrogate for physical reconfiguration cost
+(hidden reconfiguration rate 17--69\%), and that value-per-move, not move
+frequency, is the correct selective-reconfiguration metric. On real
+warehouse data (WEPA, 3 months, 411{,}830 orders), no inter-temporal trap
+manifests under natural conditions, bounding trap-aware expert routing to
+genuinely non-stationary scenarios such as promotion seasons and
+product-line transitions.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+Warehouse slotting---the assignment of stock-keeping units (SKUs) to
+storage locations---is a classical operations research problem whose
+solution directly determines order-picking travel distance, replenishment
+frequency, and congestion. In FMCG distribution centers, demand is
+non-stationary (promotions, seasonal shifts, product lifecycle turnover),
+so the optimal layout changes over time. \emph{Dynamic slotting} methods
+address this by re-optimizing the layout periodically or over rolling
+horizons.
+
+The prevailing approach treats each re-optimization as an independent
+instance: given the current demand forecast, solve for the best layout.
+This is \emph{myopic} in the technical sense---it minimizes the current
+period's cost without considering how today's reconfiguration changes
+tomorrow's options. When physical reconfiguration is free, myopia is
+harmless. When it is costly, a tension emerges: a reconfiguration that is
+locally beneficial (reduces current-period picking cost) may be globally
+harmful if it must be partially undone at high cost when demand shifts
+again.
+
+We call this phenomenon an \emph{inter-temporal reconfiguration trap}
+(Section~\ref{sec:trap}). The core question of this paper is:
+
+\begin{quote}
+\textbf{When should a warehouse defer a locally optimal physical
+reconfiguration, and how much of the resulting full-information
+opportunity can a deployable policy capture?}
+\end{quote}
+
+This question sits at the intersection of three literatures: metrical task
+systems and smoothed online optimization (switching costs),
+warehouse online reoptimization, and algorithm selection
+(Section~\ref{sec:related}). Our contribution is not a new sequential
+decision theory---MTS/SOCO provides that---but a warehouse-specific
+instantiation with discrete physical layout states, heterogeneous OR
+experts as candidate policies, real reconfiguration costs, non-stationary
+demand, and a detailed empirical characterization of when myopic
+optimization fails and when it does not.
+
+\subsection{Contributions}
+
+\begin{enumerate}
+\item \textbf{Formulation.} We define DWERP as
+$\pi(S_t) \to E_t \to A_t$, $S_{t+1} = f(S_t, A_t, \xi_{t+1})$, with
+transition cost $C_{\text{trans}} = d(L_t, L_{t+1})$ measured in physical
+layout distance, not algorithm-switch indicators
+(Section~\ref{sec:formulation}).
+
+\item \textbf{Trap characterization.} Through controlled experiments
+validated against exhaustive enumeration (beam search = exact optimum on
+small instances, gap 0.00\%), we show: (i) traps exist (constructive
+evidence: accepting a 1.6\% current-period loss avoids 50 costly moves,
+yielding 5.34\% long-term gain); (ii) they are rare-but-costly (1/12 seeds
+material, insurance-shaped distribution); (iii) they concentrate at
+intermediate lead times ($\Delta t = 1$ day between demand transition and
+cost shock); (iv) they vanish without cost shocks
+(Sections~\ref{sec:trap},~\ref{sec:controlled}).
+
+\item \textbf{The deployment paradox.} Deployable receding-horizon
+policies with crude internal cost models capture most of the
+full-information opportunity---not through better forecasting, but through
+implicit conservatism. Model fidelity does not gate capture
+(Section~\ref{sec:deployment}).
+
+\item \textbf{Transition cost surrogate failure.} Algorithm-switch counts
+$\mathbb{1}[E_t \neq E_{t-1}]$ are an inadequate proxy for physical
+reconfiguration: hidden reconfiguration (same expert name, massively
+different layout) occurs in 17--69\% of periods
+(Section~\ref{sec:transition}).
+
+\item \textbf{Real-data boundary.} On WEPA real warehouse data (411{,}830
+orders, 3 months), no trap manifests under natural or moderately stressed
+conditions---bounding applicability to genuinely non-stationary events
+(Section~\ref{sec:real}).
+\end{enumerate}
+
+\section{Related Work}\label{sec:related}
+
+\subsection{Metrical Task Systems and Switching-Cost Online Optimization}
+
+Metrical task systems (MTS)~\citep{borodin1992metrical} model an online
+decision-maker choosing a state each period from a metric space, paying
+both service costs and movement costs. Smoothed online convex optimization
+(SOCO)~\citep{goel2009smoothed} extends this with continuous action
+spaces. Learning-augmented MTS uses predictions to improve competitive
+ratios~\citep{bubeck2021mtses}. Our DWERP is a warehouse-specific MTS with
+discrete layout states, but we do not claim new online-algorithm theory;
+rather, we instantiate MTS structure in a domain with hard capacity
+constraints, heterogeneous candidate policies, and physical
+reconfiguration costs that violate clean metric assumptions
+(Section~\ref{sec:transition}).
+
+\subsection{Warehouse Online Reoptimization}
+
+Recent work studies online reoptimization in picking
+operations~\citep{lorenz2024picking}: simple re-solving of batching and
+routing problems as orders arrive dynamically performs surprisingly well.
+Related work on anticipation~\citep{lorenz2024anticipation} analyzes
+strategic waiting by pickers and finds it can be counterproductive. Our
+\emph{reconfiguration deferral} is fundamentally different from
+\emph{picker waiting}: we defer physical warehouse state changes (pallet
+moves, pick-face reassignments), not labor scheduling decisions. The two
+share the inter-temporal structure but have different cost models and
+decision variables.
+
+\subsection{Dynamic Slotting and Algorithm Selection}
+
+Dynamic storage location assignment has evolved from turnover-based
+ABC~\citep{heskett1963cube} through affinity-based
+methods~\citep{kofler2014affinity, mirzaei2022correlated} to DRL-based
+policies~\citep{waubert2022drl}. Algorithm selection---choosing which
+solver to use per instance---is studied in
+OR~\citep{kotsialos2024selection} and hyper-heuristics.
+Closest to our setting, contextual bandit put-away
+policies~\citep{yuan2024contextual} and future-order-driven
+repositioning~\citep{karimi2026keeping} adapt storage decisions to
+changing demand. None of these treat the \emph{stateful reconfiguration
+trajectory} as the decision object with explicit switching costs; they
+optimize per-instance or per-episode independently.
+
+\section{Problem Formulation}\label{sec:formulation}
+
+\subsection{DWERP}
+
+Let $t = 1, \ldots, T$ index planning periods (days or shifts). The
+warehouse state is
+\begin{equation}
+S_t = (\mathcal{O}_t, D_t, F_t, I_t, L_t, R_t, \mathcal{C})
+\end{equation}
+where $\mathcal{O}_t$ = observed orders, $D_t$ = demand history, $F_t$ =
+forecast, $I_t$ = inventory, $L_t$ = physical layout (SKU$\to$location
+assignment), $R_t$ = resources (labor, equipment, move-cost schedule), and
+$\mathcal{C}$ = hard constraints (capacity, zone, FEFO).
+
+A library $\mathcal{E} = \{E_1, \ldots, E_K\}$ of OR experts is available.
+Each expert $E_i$ is a \emph{policy}: it reads the state and outputs a new
+layout $L'_t = E_i(S_t)$ together with a cost decomposition and feasibility
+check.
+
+The routing policy selects one expert per period:
+\begin{equation}
+\pi(S_t) \to E_t, \quad A_t = E_t(S_t), \quad S_{t+1} = f(S_t, A_t, \xi_{t+1})
+\end{equation}
+where $\xi_{t+1}$ is the next period's demand/cost realization. The
+long-run objective is:
+\begin{equation}\label{eq:objective}
+\min_{\pi} \sum_{t=1}^{T} \Big[
+\underbrace{C_{\text{op}}(S_t, A_t)}_{\text{picking}} +
+\underbrace{C_{\text{trans}}(L_{t-1}, L_t)}_{\text{reconfiguration}}
+\Big]
+\end{equation}
+
+\subsection{Transition Cost}
+
+We define $C_{\text{trans}} = d(L_{t-1}, L_t)$ as a function of physical
+layout distance---not the algorithm-switch indicator
+$\mathbb{1}[E_t \neq E_{t-1}]$. In Section~\ref{sec:transition} we
+empirically justify this choice. Our primary distance proxy is the number
+of SKU relocations (Hamming distance over the layout map):
+\begin{equation}
+d(L, L') = |\{s : L(s) \neq L'(s)\}|
+\end{equation}
+with cost $C_{\text{trans}} = \lambda_m \cdot d(L_{t-1}, L_t) \cdot
+\text{mc}_t$, where $\text{mc}_t$ is the per-move cost at time $t$
+(including regime-specific multipliers).
+
+\subsection{Information Regimes}
+
+\begin{itemize}
+\item \textbf{Ex-post Beam Full-Information Policy (BFIP)}: sees the
+complete future trajectory $S_{1:T}$; serves as the (approximate) upper
+bound. Beam search with myopic-trajectory injection guarantees
+$C_{\text{BFIP}} \leq C_{\text{Myopic}}$.
+\item \textbf{Receding-Horizon Warehouse Policy (RHC)}: sees only
+$\text{Information}_t$ (current state, known promotions, forecasts, known
+cost schedules); optimizes over a lookahead window $H$ using an internal
+cost model; executes the first action. This is the deployable policy class.
+\item \textbf{Myopic (ex-post)}: per-period argmin over realized costs;
+clairvoyant but greedy. The trap victim.
+\item \textbf{Greedy-FC}: per-period argmin over forecast-model costs; the
+realistic deployable baseline.
+\end{itemize}
+
+\section{Expert Library}\label{sec:experts}
+
+\begin{table}[h]
+\centering
+\caption{OR Expert Library v3.1. All experts are capacity-constrained
+($\lceil n/L \rceil$ per location).}
+\label{tab:experts}
+\begin{tabular}{llll}
+\toprule
+ID & Expert & Decision rule & Best regime \\
+\midrule
+E1 & Static ABC & rank by full-history frequency & stable, high move cost \\
+E2 & COI & rank by frequency / volume & space-constrained \\
+E3 & Affinity & recency-weighted co-pick clustering & strong baskets \\
+E4 & Forecast & rank by informed forecast $p_{50}$ & known promotions \\
+E5 & Robust & rank by $p_{50} - \kappa \cdot (p_{90} - p_{10})$ & high uncertainty \\
+E6 & DDSR-lite & opportunistic payback-gated swaps & known-order horizon \\
+E7 & Joint & CP-SAT: forecast cost + move penalty & cost-coupled \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Experts E1--E5 produce layouts independent of the incoming layout
+(cached per period). E6 (DDSR-inspired) and E7 (joint optimizer) read the
+current layout: E6 swaps only when expected saving exceeds a payback
+threshold; E7 solves a CP-SAT model with explicit move penalties.
+
+\section{Experimental Environment}\label{sec:environment}
+
+\subsection{Synthetic Platform (Primary)}
+
+\textbf{World}: 120 SKUs (Zipf-distributed demand, category basket
+structure with concentration 0.7), 60 rack locations (6m bay spacing,
+$\sim$120m depth), 28-day horizon.
+
+\textbf{Regime sequence} (8 phases): stable(4d) $\to$ promo
+ramp(2d) $\to$ promo peak(4d) $\to$ promo decay(2d) $\to$ stable(3d)
+$\to$ velocity reversal(6d) $\to$ affinity shift(4d) $\to$ move-cost
+shock(3d, $\times$20). Promotions are \emph{known events} (multiplied into
+forecasts); demand transitions ramp gradually.
+
+\textbf{Evaluation}: per-period realized cost = L0 route distance (greedy
+TSP per order) + $\lambda_m \cdot$ moves $\cdot$ mc\_unit. Beam width 30
+(validated against exact enumeration, Section~\ref{sec:controlled});
+deterministic CP-SAT (single worker, deterministic time budget).
+
+\textbf{Protocol discipline}: experts slot on \emph{history} only
+(known-at-time $\leq t$); evaluation on \emph{future} orders; capacity
+audit on every plan; non-vacuous validation (empty fact tables rejected).
+
+\subsection{Real Data (Supplementary)}
+
+\textbf{Instacart} (Track B): 3.4M baskets, user-level train/eval split
+(no identity leakage), top-120 SKUs by train-side frequency. Real basket
+co-occurrence concentration: 0.23 (vs synthetic 0.70).
+
+\textbf{WEPA} (external validity): real block-stacking warehouse layout
+(1{,}074 storage cells, 1.4m grid) + 411{,}830 retrieval orders over 3
+months, bundled with the SLAPStack package~\citep{wepastacks2024}.
+
+\section{Expert Diversity}\label{sec:diversity}
+
+\begin{finding}[T0: No Dominant Expert]
+On the synthetic regime sequence (3 seeds $\times$ 7 evaluated phases),
+the top expert (E7 Joint) wins only 52\% of periods, with 6 distinct
+winners observed. Winner switches align with regime phases: promotion
+$\to$ E3/E4 family, stable $\to$ E1, move-cost shock $\to$ E7 (100\%).
+\end{finding}
+
+This establishes that a fixed-expert policy is suboptimal---but does not
+yet establish that \emph{sequential} routing adds value over per-period
+selection. That is the subject of Section~\ref{sec:trap}.
+
+\section{Myopic Failure: The Trap Window}\label{sec:trap}
+
+\subsection{Definitions}
+
+\begin{definition}[Normalized Trap Gain]
+For a future window $H$ starting at period $t$:
+\begin{equation}
+\text{NTG}_t(H) = \frac{C^{\text{Myopic}}_{t:t+H} - C^{\text{Dynamic}}_{t:t+H}}
+{C^{\text{Myopic}}_{t:t+H}}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Material Trap]
+$\text{MaterialTrap}_t = \mathbb{1}[\text{NTG}_t > \tau]$ with $\tau = 1\%$.
+\end{definition}
+
+\subsection{Existence (T1a)}
+
+\begin{finding}[Constructive Evidence]
+On seed 17, the dynamic (BFIP) trajectory deliberately accepts a 1.6\%
+current-period loss in the affinity-shift phase (choosing E1 over E3),
+which positions the layout so that the subsequent move-cost-shock period
+requires only 5 moves instead of 55. Total long-term gain: 5.34\%
+(TrapScore = 2116/80 = 26.3).
+\end{finding}
+
+This is the core mechanism in miniature: \emph{myopic optimization
+over-configures to current demand, then pays dearly to undo it when costs
+spike}.
+
+\subsection{Prevalence (T1b)}
+
+\begin{finding}[Insurance-Shaped Distribution]
+Across 12 independent seeds: 10/12 have gap $\approx$ 0, 1/12 small
+(0.24--1.2\%), 1/12 large (5.34\%). Divergence points concentrate at
+promo-ramp (4/12) and stable-2 (4/12)---the ``eve of structural shifts.''
+Material traps: 1/12 seeds.
+\end{finding}
+
+The value of sequential routing is \emph{event-dependent}---like insurance,
+it costs nothing when nothing happens and saves substantially when a trap
+does occur. This motivates the controlled experiments of
+Section~\ref{sec:controlled}.
+
+\subsection{Exact Validation}\label{sec:controlled}
+
+On small instances (60 SKU, 30 locations, 4 evaluated periods,
+$7^4 = 2{,}401$ trajectories exhaustively enumerated):
+
+\begin{finding}[Beam = Exact]
+Beam-30 achieves the exact optimum on all 4 seeds (gap 0.00\%).
+\textbf{With} move-cost shock ($\times$20): myopic gap 0.46--2.68\%,
+trajectories diverge. \textbf{Without} shock: exact = beam = myopic
+(gap 0.00\% everywhere).
+\end{finding}
+
+The no-shock control confirms the causal structure: \emph{traps are purely
+the interaction of transition-period decisions with subsequent cost
+shocks}---neither alone suffices.
+
+\subsection{Controlled Trap Phase Diagram}
+
+Systematically varying lead time $\Delta t \in \{0,1,2,4\}$ (days between
+demand transition and cost shock) and shock magnitude $M_s \in
+\{2,5,10,20\}$:
+
+\begin{finding}[Intermediate Lead-Time Band]
+Traps concentrate at $\Delta t = 1$: all four magnitudes are material
+(NTG 1.26--1.69\%). At $\Delta t = 0$, only $M_s = 20$ is material
+(1.34\%). At $\Delta t \geq 2$, no cell is material. The myopic signature:
+zero moves during transition, then 2$\times$ dynamic's moves at shock
+(67 vs 35 at $\Delta t=1, M_s=2$).
+\end{finding}
+
+The non-monotonicity in $\Delta t$ is itself informative: at $\Delta t=0$
+the shock arrives before any reconfiguration can ``set wrong''; at
+$\Delta t \geq 2$ the wrong reconfiguration has time to be amortized.
+The dangerous zone is \emph{just enough lead time to act, not enough to
+recover}.
+
+\section{The Deployment Paradox}\label{sec:deployment}
+
+\subsection{Capture Rate}
+
+\begin{definition}[Oracle Opportunity Capture Rate]
+\begin{equation}
+\text{CaptureRate} = \frac{C_{\text{GreedyFC}} - C_{\text{RHC}}}
+{C_{\text{GreedyFC}} - C_{\text{BFIP}}}
+\end{equation}
+\end{definition}
+
+\subsection{Results}
+
+Twelve seeds, receding-horizon $H=2$ with three internal cost models
+(linear $\sum p_{50} \cdot \text{dist}$; stop-count-aware; route-aware),
+schedule-aware and schedule-blind:
+
+\begin{finding}[Capture by Conservative Models]
+The crudest model (L1 linear) captures the most opportunity relative to
+ex-post myopic (mean +43.4\% on seeds with headroom); the route-aware
+model captures +24.6\%; the stop-aware model is unstable. \emph{Model
+fidelity does not gate capture.}
+\end{finding}
+
+\begin{finding}[The Lazy Policy Paradox]
+On seed 17: ex-post myopic = 38{,}106, RHC = greedyFC = 36{,}444, BFIP =
+36{,}070. The deployable policies are \emph{not better forecasters}---they
+are \emph{less aggressive reconfigurers}. Their imprecision acts as
+implicit stickiness that avoids the trap. The true clairvoyance premium
+(BFIP vs greedyFC) is only $\sim$1.0\%.
+\end{finding}
+
+This connects directly to the MTS literature's lazy-vs-aggressive
+trade-off: in switching-cost environments, \emph{conservatism is
+self-protecting}. Our experiments provide the warehouse-domain empirical
+instance of this theoretical result.
+
+\section{Reconfiguration Sensitivity}\label{sec:sensitivity}
+
+Sweeping the global move-cost multiplier $\lambda_m \in \{0, 0.25, 0.5, 1,
+2, 5, 10, 20, 50\}$ (3 seeds, sequence-internal shocks disabled):
+
+\begin{finding}[Left-Low, Mid-Peak, Right-Plateau]
+The dynamic-vs-myopic gap is $\sim$0.1\% at $\lambda_m \leq 0.25$ (moves
+nearly free, planning unnecessary), peaks at $\lambda_m = 10$ (mean 1.26\%,
+max 3.47\%), and plateaus at 1.0--1.2\% for $\lambda_m \in [20, 50]$.
+\emph{At high move costs, dynamic moves more than myopic but
+better}: 164 vs 152 moves at $\lambda_m = 50$.
+\end{finding}
+
+\begin{finding}[Value Per Move]
+$VPM = (\Delta C_{\text{future op}} - C_{\text{move}}) / N_{\text{moves}}$.
+In absolute terms (vs never-move baseline), VPM is negative and worsens
+with $\lambda_m$ ($-0.8 \to -84.0$): at high costs, even optimal moves
+lose vs doing nothing. In relative terms, $VPM_{\text{dynamic}} >
+VPM_{\text{myopic}}$ at \emph{all} seven $\lambda_m$ levels, with the
+gap widening monotonically ($+0.1 \to +5.5$).
+\end{finding}
+
+The combined interpretation: \emph{when not to reconfigure} at high
+$\lambda_m$ does not mean ``never reconfigure''; it means
+\textbf{reconfigure selectively}---only when expected future value exceeds
+the move cost. The dynamic policy's advantage grows with stakes precisely
+because it is more selective per move.
+
+\section{Transition Cost: An Inadequate Surrogate}\label{sec:transition}
+
+\subsection{Hidden Reconfiguration}
+
+\begin{finding}[Switch-Count Failure]
+Across 5 cost conditions $\times$ 6 seeds (36 transitions each):
+False Switch rate (expert name changed, layout $\leq 2$ moves different)
+= 0\%. \textbf{Hidden Reconfiguration rate} (expert name unchanged,
+layout $\geq 20$ moves different) = 17--69\%. Under switch-only penalties
+($\lambda_s = 20$), the rate rises to 69\% for the dynamic policy:
+policies learn to ``change content without changing name'' to avoid the
+indicator penalty.
+\end{finding}
+
+\subsection{Metric Properties}
+
+\begin{proposition}[Valid Metric Space]
+Both $d(L, L') = |\{s : L(s) \neq L'(s)\}|$ (Hamming) and
+$d(L, L') = \sum_s \|L(s) - L'(s)\|_2$ (Euclidean sum) satisfy symmetry
+and the triangle inequality on layout pairs, constituting a valid metric
+space for the MTS framework.
+\end{proposition}
+
+However, four warehouse-specific phenomena violate clean MTS assumptions:
+(i) asymmetric open/close pick-face costs; (ii) capacity-infeasible
+transitions (hard constraint, not merely costly); (iii) batch effects
+($k$ simultaneous moves share mobilization cost); (iv) swap chains
+(exchanging two SKUs' locations requires a temporary third position).
+We detected 663 swap pairs across expert layout pairs; each swap's true
+labor cost exceeds its Hamming count by $\geq 1$ move.
+
+These violations motivate $C_{\text{trans}} = d(L_t, L_{t+1})$ as a
+\emph{generalized switching cost} rather than a pure metric.
+
+\section{Real Warehouse Validation}\label{sec:real}
+
+\subsection{WEPA-Natural}
+
+40 top-retrieval SKUs, 12{,}000 real retrieval orders, real layout
+geometry (1{,}074 storage cells at 1.4m grid):
+
+\begin{finding}[No Natural Trap]
+Gap = 0.00\%; the myopic trajectory is \emph{identical} to the BFIP
+trajectory. Winner diversity exists (E1/E6/E7 alternate by period), but
+the greedy per-period choice is already globally optimal.
+\end{finding}
+
+\subsection{WEPA-Stress}
+
+Injecting a demand transition (628 surge orders on bottom-half SKUs,
+$\sim$30\% volume increase in one period) followed by a $\times$20
+move-cost shock:
+
+\begin{finding}[Moderate Stress Still Insufficient]
+Gap remains 0.00\%. The surge changes period winners but does not create
+an inter-temporal trap.
+\end{finding}
+
+\subsection{External Validity Boundary}
+
+\begin{finding}[Boundary]
+Inter-temporal reconfiguration traps require demand regime changes of a
+magnitude not present in steady-state warehouse operations. This bounds
+trap-aware expert routing to promotion seasons, seasonal transitions, and
+product-line changes---precisely the non-stationary scenarios DWERP
+targets.
+\end{finding}
+
+This is consistent with practical slotting guidelines (\eg ``re-slot only
+when payback is clear''): the everyday answer to ``when not to
+reconfigure'' is \emph{don't bother}.
+
+\section{Discussion}\label{sec:discussion}
+
+\subsection{When Sequential Routing Matters}
+
+\begin{itemize}
+\item \textbf{Demand regime change}: promotion ($\times$3--10), velocity
+reversal, affinity shift---sufficient magnitude to change the optimal
+layout
+\item \textbf{Intermediate reconfiguration cost}: $\lambda_m \sim 10$
+(peak value); near-zero (free moves $\to$ plan per-period) or extreme
+(nobody moves $\to$ stickiness is trivially optimal)
+\item \textbf{Intermediate lead time}: $\Delta t \sim 1$ period between
+demand transition and cost shock
+\end{itemize}
+
+\subsection{When It Doesn't}
+
+\begin{itemize}
+\item Steady-state operations (WEPA-Natural: gap = 0)
+\item Near-zero move costs (planning unnecessary)
+\item Extremely high move costs (plateau; VPM negative vs baseline)
+\end{itemize}
+
+\subsection{The Deployment Implication}
+
+The lazy-policy paradox suggests that practical systems should
+\emph{err toward stickiness} rather than sophistication. A crude forecast
+model that underestimates optimization opportunities will naturally make
+fewer moves---and in trap-prone environments, this is protective. This is
+the warehouse-domain instance of the MTS lazy-vs-aggressive trade-off.
+
+\subsection{Design Implications for WMS Vendors}
+
+\begin{enumerate}
+\item Measure $d(L_t, L_{t+1})$, not algorithm switches
+\item Cost-aware expert selection: predict $\hat{C}(E_i | S_t)$, not
+classify winners
+\item Option-value hold: when uncertain, deferring a locally beneficial
+reconfiguration has positive expected value
+\end{enumerate}
+
+\section{Conclusion}\label{sec:conclusion}
+
+We formalized, demonstrated, and bounded the inter-temporal
+reconfiguration trap in dynamic warehouse slotting. The core
+insight---\emph{when not to reconfigure}---is the option value of deferring
+locally beneficial physical changes under future uncertainty. The
+deployment paradox (conservatism = protection) suggests that practical
+systems need not be clairvoyant to perform well; they need to be
+appropriately reluctant to act.
+
+Three mechanisms, protected throughout this work, constitute the paper's
+contribution:
+\begin{enumerate}
+\item Different states $\to$ different experts are optimal (T0 diversity)
+\item Current optimum $\neq$ long-run optimum (T1 trap window)
+\item As reconfiguration cost grows, \emph{whether to act} becomes the
+decision variable (T2 sensitivity, VPM)
+\end{enumerate}
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{20}
+
+\bibitem[Borodin et al.(1992)]{borodin1992metrical}
+A.~Borodin, N.~Linial, and M.~E. Saks.
+\newblock An optimal on-line algorithm for metrical task system.
+\newblock In \emph{STOC}, 1992.
+
+\bibitem[Heskett(1963)]{heskett1963cube}
+J.~L. Heskett.
+\newblock Cube-per-order index---a key to warehouse stock location.
+\newblock \emph{Transportation and Distribution Management}, 3:27--31, 1963.
+
+\bibitem[Karimi et al.(2026)]{karimi2026keeping}
+N.~Karimi, K.~Zaerpour, and R.~de~Koster.
+\newblock Keeping up with changing customer demand: Adaptive data-driven
+  storage and repositioning in automated warehouses.
+\newblock \emph{Transportation Research Part E}, 2026.
+
+\bibitem[Kofler et al.(2014)]{kofler2014affinity}
+A.~Kofler, S.~Beham, S.~Wagner, and M.~Affenzeller.
+\newblock Affinity-based slotting in warehouses with dynamic order patterns.
+\newblock In \emph{Computer Aided Systems Theory}, 2014.
+
+\bibitem[Lorenz et al.(2024a)]{lorenz2024picking}
+J.~Lorenz, J.~Otto, and M.~Gendreau.
+\newblock Picking operations in warehouses with dynamically arriving orders:
+  How good is reoptimization?
+\newblock \emph{arXiv:2409.12619}, 2024.
+
+\bibitem[Lorenz et al.(2024b)]{lorenz2024anticipation}
+J.~Lorenz, J.~Otto, and M.~Gendreau.
+\newblock The value of anticipation in warehouse operations.
+\newblock \emph{arXiv}, 2024.
+
+\bibitem[Mirzaei et al.(2022)]{mirzaei2022correlated}
+M.~Mirzaei, K.~Zaerpour, and R.~de~Koster.
+\newblock How to benefit from order data: Correlated dispersed storage
+  assignment in robotic warehouses.
+\newblock \emph{International Journal of Production Research},
+  60(2):549--568, 2022.
+
+\bibitem[Waubert~de~Puiseau et al.(2022)]{waubert2022drl}
+W.~Waubert~de~Puiseau, T.~Ponsen, G.~Van~Leare, and E.~Lefeber.
+\newblock Dynamic storage location assignment in warehouses using deep
+  reinforcement learning.
+\newblock \emph{Technologies}, 10(6):129, 2022.
+
+\bibitem[Yuan et al.(2024)]{yuan2024contextual}
+Z.~Yuan et~al.
+\newblock Contextual bandit policies for put-away in warehouses.
+\newblock In \emph{Winter Simulation Conference}, 2024.
+
+\bibitem[WEPAStacks(2024)]{wepastacks2024}
+SLAPStack contributors.
+\newblock WEPAStacks: Real warehouse layout and order data.
+\newblock \url{https://pypi.org/project/slapstack/}, 2024.
+
+\end{thebibliography}
+
+\end{document}
