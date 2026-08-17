@@ -10,7 +10,7 @@
 | 2 | WEPAStacks (slapstack) | 1,952 cells, 411,830 orders, 3 months | CC0 (PyPI package) | ✅ Fully loaded | R21 |
 | 3 | CrossStacks (slapstack) | 1,952 cells, 16,802 orders | CC0 (PyPI package) | ✅ Fully loaded | R24 |
 | 4 | Favorita Grocery Sales | 890MB (full) | Unknown (Kaggle) | ✅ **FULL via new credentials**(top-40 items, 54 stores × 14d) | R26b |
-| 5 | M5 Walmart Forecasting | 410MB (M5-aux) | CC0 (Kaggle) | ❌ Not attempted (Kaggle API throttled) | — |
+| 5 | M5 Walmart Hierarchical | 47MB (parquet mirror) | CC0 (Kaggle) | ✅ **FULL via new credentials** | R28 |
 | 6 | SLAPRP | Academic benchmark | Open (OR-Library style) | ❌ Not attempted (no Kaggle/PyPI presence) | — |
 | 7 | Footwear Picking 2025 (Mendeley) | ~Academic | Open | ❌ Not attempted (Mendeley 404, Google captcha) | — |
 
@@ -27,7 +27,7 @@
 **Cross-dataset finding**: Regardless of demand concentration regime,
 no natural trap exists (gap = 0 across all five real-data configurations).
 This strengthens the paper's deployment-boundary finding (§11):
-natural warehouse data is too smooth for inter-temporal traps.
+natural warehouse data is too smooth for inter-temporal traps, regardless of data density, hierarchical structure, or demand concentration regime.
 
 ## Negative results (honest scope)
 

@@ -43,8 +43,11 @@ Warehouse Policy / **Reconfiguration Deferral**(非 "waiting")
 | **R21** | **WEPA-Natural/Stress** | 真实仓上 trap 存在? | **❌ gap=0.00%(myopic=BFIP=optimal)**:自然数据太平滑,trap 需极端 regime |
 | **R24** | **CrossStacks** | 第二个独立仓验证 | **❌ gap=0.00%,1-2 winners**:部署边界不限于 WEPA |
 | **R25** | **Instacart 浓度切片** | 高 vs 中浓度子集 | top-10%:2 winners;mid-10%:2 winners;均 gap=0% |
-| **R26** | **Favorita 代理** | 极端浓度(Zipf 0.7) | gap=0%,2 winners;Kaggle 限速仅得 1MB |
-| **R27** | **数据可获得性报告** | 4 个未完全接入源 | Favorita proxy / M5 未试 / SLAPRP 不可用 / Footwear 404 |
+| **R26b** | **Favorita 真实** | 54 门店×14d,890MB 真实数据 | gap=0%,2 winners;替换 R26 代理 |
+| **R27** | **数据可获得性报告** | 4 个未完全接入源 | **R28 后已更新**:M5 ✅ / Footwear ❌ / SLAPRP ❌ |
+| **R28** | **M5 Walmart 真实** | 5-yr hierarchical, 47MB parquet | **gap=0%, 1 winner**(稀疏, 数据量限制) |
+| **R27** | **数据可获得性报告** | 4 个未完全接入源 | **R28 后已更新**:M5 ✅ / Footwear ❌ / SLAPRP ❌ |
+| **R28** | **M5 Walmart 真实** | 5-yr hierarchical, 47MB parquet | **gap=0%, 1 winner**(稀疏, 数据量限制) |
 
 ## 3. 夜间四实验的统一叙事(R17–R20)
 
