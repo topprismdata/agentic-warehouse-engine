@@ -40,6 +40,7 @@ Warehouse Policy / **Reconfiguration Deferral**(非 "waiting")
 | **R18** | **Exact Oracle** | beam=optimal? | **beam-30=exact(4/4 seeds,gap 0.00%)**;no-shock=全等 |
 | **R19** | **度量性质** | d(L,L) 合法度量? | 对称✓ 三角✓ → MTS 可挂靠;4 类特异性违反 |
 | **R20** | **VPM** | 搬库选择性? | VPM_dy>VPM_my 全 7 档,差值随 λm 扩大 |
+| **R21** | **WEPA-Natural/Stress** | 真实仓上 trap 存在? | **❌ gap=0.00%(myopic=BFIP=optimal)**:自然数据太平滑,trap 需极端 regime |
 
 ## 3. 夜间四实验的统一叙事(R17–R20)
 
@@ -112,12 +113,14 @@ Warehouse Policy / **Reconfiguration Deferral**(非 "waiting")
   R18 表)
 - **缓存**: R13/R16/R17/R20 JSON cells(断点续跑)
 
-## 7. 下一步(白天,优先级)
+## 7. 下一步(更新)
 
-### 7.1 立即(今日)
-1. **R16 维度扩展**:Trap 相图加 ShockPersistence × DemandShift 轴(SPEC §3.4)
-2. **R17 终版报告**:引用修正(消除中间数据残留),补充 per-seed 附录
-3. **论文 Intro/Related Work 初稿**(可选,时间允许)
+### 7.1 已完成(上午追加)
+1. ✅ **R21 WEPA-Natural/Stress**: slapstack 0.1.1 pip 安装,WEPAStacks 数据
+   在包内(43MB orders + layout);NATURAL gap=0(myopic=BFIP=optimal);
+   STRESS(温和 surge + mc×20)仍 gap=0 → **外部效度边界:trap 不出现在
+   自然稳态仓数据上,需极端 regime 变化**(论文 Discussion 素材)
+2. ⬜ **论文骨架初稿**(最高优先级 —— 证据链已齐)
 
 ### 7.2 本周
 4. **WEPA-Natural/Stress**(数据可达性调研 → 接入 → 复核 trap 率)
