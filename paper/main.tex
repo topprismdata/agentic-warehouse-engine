@@ -305,6 +305,16 @@ months, bundled with the SLAPStack package~\citep{wepastacks2024}.
 
 \section{Expert Diversity}\label{sec:diversity}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/expert_winning_map.png}
+\caption{Expert Winning Map: modal myopic winner by regime phase (x-axis,
+demand shift) and move-cost multiplier $\lambda_m$ (y-axis). Cell color =
+expert ID; opacity = stability (share of modal winner across seeds). No
+single expert dominates; winners switch systematically with state.}
+\label{fig:winning-map}
+\end{figure}
+
 \begin{finding}[T0: No Dominant Expert]
 On the synthetic regime sequence (3 seeds $\times$ 7 evaluated phases),
 the top expert (E7 Joint) wins only 52\% of periods, with 6 distinct
@@ -378,6 +388,17 @@ shocks}---neither alone suffices.
 
 \subsection{Controlled Trap Phase Diagram}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/trap_phase_diagram.png}
+\caption{Trap Phase Diagram: NormalizedTrapGain (\%) across lead time
+$\Delta t$ (transition-to-shock gap, rows) and shock magnitude $M_s$
+(columns). Traps concentrate at the intermediate lead time $\Delta t = 1$
+(NTG 1.26--1.69\%, all magnitudes material); $\Delta t \geq 2$ decays;
+$\Delta t = 0$ requires extreme shock only.}
+\label{fig:trap-diagram}
+\end{figure}
+
 Systematically varying lead time $\Delta t \in \{0,1,2,4\}$ (days between
 demand transition and cost shock) and shock magnitude $M_s \in
 \{2,5,10,20\}$:
@@ -397,6 +418,17 @@ The dangerous zone is \emph{just enough lead time to act, not enough to
 recover}.
 
 \section{The Deployment Paradox}\label{sec:deployment}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/rf_capture.png}
+\caption{Ranking Fidelity vs.\ Capture Rate: each point is a
+(model, horizon) configuration; x-axis = Spearman $\rho$ between predicted
+and realized per-expert cost rankings; y-axis = Oracle Opportunity Capture
+Rate. Capture does not increase monotonically with $\rho$: the crudest
+model (L1) achieves the highest capture via implicit conservatism.}
+\label{fig:rf-capture}
+\end{figure}
 
 \subsection{Capture Rate}
 
@@ -435,6 +467,16 @@ instance of this theoretical result.
 
 \section{Reconfiguration Sensitivity}\label{sec:sensitivity}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/t2_lambda_curves.png}
+\caption{Reconfiguration sensitivity curves: $\lambda_m \to$ total moves
+(left), expert switches (center), and dynamic-vs-myopic gap (right, three
+statistics). Gap peaks at $\lambda_m = 10$ and plateaus at high $\lambda_m$
+(dynamic moves more but better).}
+\label{fig:lambda-curves}
+\end{figure}
+
 Sweeping the global move-cost multiplier $\lambda_m \in \{0, 0.25, 0.5, 1,
 2, 5, 10, 20, 50\}$ (3 seeds, sequence-internal shocks disabled):
 
@@ -445,6 +487,17 @@ max 3.47\%), and plateaus at 1.0--1.2\% for $\lambda_m \in [20, 50]$.
 \emph{At high move costs, dynamic moves more than myopic but
 better}: 164 vs 152 moves at $\lambda_m = 50$.
 \end{finding}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/vpm_curve.png}
+\caption{Value Per Move analysis: $\lambda_m \to$ total moves (left) and
+VPM (right) for myopic and dynamic policies. VPM is negative against the
+never-move baseline at all $\lambda_m$ (top-costs: even optimal moves
+lose vs.\ inaction), but $VPM_{\text{dynamic}} > VPM_{\text{myopic}}$ at
+all levels with widening gap ($+0.1 \to +5.5$).}
+\label{fig:vpm}
+\end{figure}
 
 \begin{finding}[Value Per Move]
 $VPM = (\Delta C_{\text{future op}} - C_{\text{move}}) / N_{\text{moves}}$.
@@ -594,12 +647,28 @@ decision variable (T2 sensitivity, VPM)
 \end{enumerate}
 
 \bibliographystyle{plainnat}
-\begin{thebibliography}{20}
+\begin{thebibliography}{30}
 
 \bibitem[Borodin et al.(1992)]{borodin1992metrical}
 A.~Borodin, N.~Linial, and M.~E. Saks.
 \newblock An optimal on-line algorithm for metrical task system.
 \newblock In \emph{STOC}, 1992.
+
+\bibitem[Bubeck et al.(2021)]{bubeck2021mtses}
+S.~Bubeck, M.~B. Cohen, J.~R. Lee, and Y.~Li.
+\newblock An algorithmist's view on metrical task systems.
+\newblock \emph{SIGACT News}, 52(2):75--89, 2021.
+
+\bibitem[Goel and Wierman(2009)]{goel2009smoothed}
+G.~Goel and A.~Wierman.
+\newblock An online algorithm for smoothed offline optimization.
+\newblock In \emph{COMSNETS}, 2009.
+
+\bibitem[Andrew et al.(2013)]{andrew2013optimal}
+L.~Andrew, S.~Barman, K.~Liu, A.~T. Kalai, and M.~K. Rege.
+\newblock Optimal algorithms for online convex optimization with switching
+costs.
+\newblock In \emph{SODA}, 2013.
 
 \bibitem[Heskett(1963)]{heskett1963cube}
 J.~L. Heskett.
@@ -650,6 +719,82 @@ Z.~Yuan et~al.
 SLAPStack contributors.
 \newblock WEPAStacks: Real warehouse layout and order data.
 \newblock \url{https://pypi.org/project/slapstack/}, 2024.
+
+\bibitem[K{"u}bler et al.(2020)]{kubler2020joint}
+P.~K{"u}bler, C.~H. Glock, and T.~Bauernhansl.
+\newblock A new iterative method for solving the joint dynamic storage
+  location assignment, order batching and picker routing problem in
+  manual order picking systems.
+\newblock \emph{Computers \& Industrial Engineering}, 147:106543, 2020.
+
+\bibitem[Pazour and Carlo(2015)]{pazour2015warehouse}
+J.~A. Pazour and H.~J. Carlo.
+\newblock Warehouse reshuffling: Insights and optimization.
+\newblock \emph{Transportation Research Part E}, 73:207--226, 2015.
+
+\bibitem[Winkelmann et al.(2025)]{winkelmann2025integrated}
+C.~Winkelmann et~al.
+\newblock Integrated storage assignment for an e-grocery fulfilment centre:
+  Accounting for day-of-week demand patterns.
+\newblock \emph{Flexible Services and Manufacturing Journal}, 37, 2025.
+
+\bibitem[Prunet et al.(2025)]{prunet2025slapr}
+N.~Prunet, N.~Absi, and D.~Cattaruzza.
+\newblock The storage location assignment and picker routing problem: A
+  generic branch-cut-and-price algorithm.
+\newblock \emph{European Journal of Operational Research}, 2025.
+
+\bibitem[Rijsenbrij and Pielage(2009)]{rijsenbrij2009structural}
+J.~C. Rijsenbrij and J.~G. Pielage.
+\newblock The structural design of parcel and mail sorting systems.
+\newblock In \emph{Innovations in Distribution Logistics}, 2009.
+
+\bibitem[de~Koster et al.(2007)]{dekoster2007design}
+R.~de~Koster, T.~Le-Duc, and K.~J. Roodbergen.
+\newblock Design and control of warehouse order picking: A literature
+  review.
+\newblock \emph{European Journal of Operational Research}, 182(2):481--501,
+  2007.
+
+\bibitem[Gu et al.(2007)]{gu2007research}
+J.~Gu, M.~Goetschalckx, and L.~F. McGinnis.
+\newblock Research on warehouse operation: A comprehensive review.
+\newblock \emph{European Journal of Operational Research},
+  177(1):1--21, 2007.
+
+\bibitem[Roodbergen and Vis(2009)]{roodbergen2009survey}
+K.~J. Roodbergen and I.~F. A. Vis.
+\newblock A survey of literature on automated storage and retrieval
+  systems.
+\newblock \emph{European Journal of Operational Research},
+  194(2):343--362, 2009.
+
+\bibitem[Zaerpour et al.(2015)]{zaerpour2015vertical}
+K.~Zaerpour, R.~de~Koster, and Y.~Yu.
+\newblock Storage policies and vertical storage systems: A survey.
+\newblock In \emph{Operations Research Proceedings}, 2015.
+
+\bibitem[Boysen et al.(2019)]{boysen2019warehousing}
+N.~Boysen, R.~de~Koster, and F.~Weidinger.
+\newblock Warehousing in the e-commerce era: A survey.
+\newblock \emph{European Journal of Operational Research},
+  277(2):396--411, 2019.
+
+\bibitem[Smith-Miles(2009)]{smithmiles2009cross}
+K.~A. Smith-Miles.
+\newblock Cross-disciplinary perspectives on meta-learning for algorithm
+  selection.
+\newblock \emph{ACM Computing Surveys}, 41(1):1--25, 2009.
+
+\bibitem[Kotthoff(2016)]{kotthoff2016algorithm}
+L.~Kotthoff.
+\newblock Algorithm selection for combinatorial search problems: A survey.
+\newblock \emph{AI Magazine}, 35(1):48--60, 2016.
+
+\bibitem[Rice(1976)]{rice1976algorithm}
+J.~R. Rice.
+\newblock The algorithm selection problem.
+\newblock \emph{Advances in Computers}, 15:65--118, 1976.
 
 \end{thebibliography}
 
