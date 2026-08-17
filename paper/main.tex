@@ -101,39 +101,50 @@ optimization fails and when it does not.
 
 \subsection{Contributions}
 
-\begin{enumerate}
-\item \textbf{Formulation.} We define DWERP as
-$\pi(S_t) \to E_t \to A_t$, $S_{t+1} = f(S_t, A_t, \xi_{t+1})$, with
-transition cost $C_{\text{trans}} = d(L_t, L_{t+1})$ measured in physical
-layout distance, not algorithm-switch indicators
-(Section~\ref{sec:formulation}).
+We compress our findings into three layered contributions, ordered from
+most-robust to most-provocative.
 
-\item \textbf{Trap characterization.} Through controlled experiments
-validated against exhaustive enumeration (beam search = exact optimum on
-small instances, gap 0.00\%), we show: (i) traps exist (constructive
-evidence: accepting a 1.6\% current-period loss avoids 50 costly moves,
-yielding 5.34\% long-term gain); (ii) they are rare-but-costly (1/12 seeds
-material, insurance-shaped distribution); (iii) they concentrate at
-intermediate lead times ($\Delta t = 1$ day between demand transition and
-cost shock); (iv) they vanish without cost shocks
-(Sections~\ref{sec:trap},~\ref{sec:controlled}).
+\begin{enumerate}
+\item \textbf{Structural opportunity exists.} We formalize DWERP as
+$\pi(S_t) \to E_t \to A_t$, $S_{t+1} = f(S_t, A_t, \xi_{t+1})$, with
+transition cost $C_{\text{trans}} = d_m(L_t, L_{t+1})$ (move-count proxy) measured in physical
+layout distance, not algorithm-switch indicators
+(Section~\ref{sec:formulation}). Through controlled experiments
+validated against exhaustive enumeration (Section~\ref{sec:controlled}),
+we show: (i) traps exist (constructive evidence: accepting a 1.6\% current
+loss avoids 50 costly moves, yielding 5.34\% long-term gain);
+(ii) they are rare-but-costly (1/12 seeds material, insurance-shaped
+distribution); (iii) they concentrate at intermediate lead times
+($\Delta t = 1$ day between demand transition and cost shock);
+(iv) they vanish without cost shocks. This establishes the
+\emph{inter-temporal reconfiguration trap} as a real, measurable
+phenomenon in dynamic warehouse slotting.
 
 \item \textbf{The deployment paradox.} Deployable receding-horizon
-policies with crude internal cost models capture most of the
-full-information opportunity---not through better forecasting, but through
-implicit conservatism. Model fidelity does not gate capture
-(Section~\ref{sec:deployment}).
+policies with crude internal cost models capture the majority of
+opportunity through \emph{implicit conservatism}, not through better
+forecasting. The deployment paradox is two-pronged: (a) model fidelity
+does not gate capture (L1 linear beats L2 stop-aware and L3 route-aware
+on the same real-data traces, Section~\ref{sec:deployment}); (b) algorithm
+complexity does not help---FixedBest and hand-coded rules beat
+XGBoost, MLP, and a 1B-parameter LLM (Section~\ref{sec:selector}).
+This is the deployment paradox: the most conservative deployable baseline
+is a strong deployable benchmark, not a theoretical cost lower bound.
 
-\item \textbf{Transition cost surrogate failure.} Algorithm-switch counts
-$\mathbb{1}[E_t \neq E_{t-1}]$ are an inadequate proxy for physical
-reconfiguration: hidden reconfiguration (same expert name, massively
-different layout) occurs in 17--69\% of periods
-(Section~\ref{sec:transition}).
-
-\item \textbf{Real-data boundary.} On WEPA real warehouse data (411{,}830
-orders, 3 months), no trap manifests under natural or moderately stressed
-conditions---bounding applicability to genuinely non-stationary events
-(Section~\ref{sec:real}).
+\item \textbf{Boundary and mechanism: theoretical abstraction
+meets physical warehouse mechanics.} Two findings together bound the
+practical scope: first, on six public real-world datasets evaluated
+through 8 experimental cohorts, the dynamic-vs-myopic gap collapses to
+0.00\% on natural operational traces, an \emph{empirical deployment-gap
+collapse} rather than a universality claim (Section~\ref{sec:real}).
+Second, this collapse does not mean DWERP is vacuous: the metric
+abstraction $d(L,L')$ (move count) is a valid metric space, but
+operational implementations systematically depart from clean metric
+through asymmetric move costs, capacity constraints, batching, and
+exchange chains (hidden reconfiguration rate 17--69\%,
+Section~\ref{sec:transition}). The gap between metric abstraction and
+implementation cost is itself a finding, not a bug: it defines where
+the clean MTS theory must yield to warehouse-specific cost models.
 \end{enumerate}
 
 \section{Related Work}\label{sec:related}
@@ -447,13 +458,13 @@ schedule-aware and schedule-blind:
 
 \begin{finding}[Capture by Conservative Models]
 The crudest model (L1 linear) captures the most opportunity relative to
-ex-post myopic (mean +43.4\% on seeds with headroom); the route-aware
+ex-post myopic (clairvoyant per-period argmin) (mean +43.4\% on seeds with headroom); the route-aware
 model captures +24.6\%; the stop-aware model is unstable. \emph{Model
 fidelity does not gate capture.}
 \end{finding}
 
 \begin{finding}[The Lazy Policy Paradox]
-On seed 17: ex-post myopic = 38{,}106, RHC = greedyFC = 36{,}444, BFIP =
+On seed 17: ex-post myopic (clairvoyant per-period argmin) = 38{,}106, RHC = greedyFC = 36{,}444, BFIP =
 36{,}070. The deployable policies are \emph{not better forecasters}---they
 are \emph{less aggressive reconfigurers}. Their imprecision acts as
 implicit stickiness that avoids the trap. The true clairvoyance premium
@@ -545,7 +556,7 @@ transitions (hard constraint, not merely costly); (iii) batch effects
 We detected 663 swap pairs across expert layout pairs; each swap's true
 labor cost exceeds its Hamming count by $\geq 1$ move.
 
-These violations motivate $C_{\text{trans}} = d(L_t, L_{t+1})$ as a
+These violations motivate $C_{\text{trans}} = d_m(L_t, L_{t+1})$ (move-count proxy) as a
 \emph{generalized switching cost} rather than a pure metric.
 
 \section{Real Warehouse Validation}\label{sec:real}
@@ -655,7 +666,7 @@ the warehouse-domain instance of the MTS lazy-vs-aggressive trade-off.
 \subsection{Design Implications for WMS Vendors}
 
 \begin{enumerate}
-\item Measure $d(L_t, L_{t+1})$, not algorithm switches
+\item Measure $d_m(L_t, L_{t+1})$ (move-count proxy), not algorithm switches
 \item Cost-aware expert selection: predict $\hat{C}(E_i | S_t)$, not
 classify winners
 \item Option-value hold: when uncertain, deferring a locally beneficial
@@ -700,6 +711,21 @@ sparse R28 data). This means the $\geq 2$-winners finding requires data
 with regime variation; in extreme steady-state data, the deployment
 boundary degenerates to a trivial single-strategy problem. This is
 not a bug---it is the natural limit of the T0 finding.
+
+\subsection{One-sentence summary}
+
+\begin{finding}[Deployment-Gap Collapse, Formalized]
+On six public real-world warehouse datasets, evaluated through 8
+experimental cohorts, the dynamic-vs-myopic gap collapses to 0.00\%
+on natural operational traces---an \emph{empirical deployment-gap
+collapse} that does not contradict the existence of inter-temporal
+traps (shown constructively on controlled synthetic platforms with
+regime changes). The 1.6\% constructive example (seed 17) and the
+5-year hierarchical M5 benchmark jointly demonstrate that the
+deployment paradox---conservative stationary policies dominate
+seemingly more adaptive learned selectors---is the practical face of
+the trap phenomenon in natural data.
+\end{finding}
 
 \section{Conclusion}\label{sec:conclusion}
 
