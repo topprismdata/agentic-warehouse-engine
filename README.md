@@ -1,97 +1,144 @@
-# agentic-warehouse-engine
+# When Not to Reconfigure?
 
-> Agentic Warehouse Decision Engine — v0.1 partial implementation
-> 见 `/Users/guohongbin/Downloads/FMCG_Agentic_Warehouse_Decision_Engine_研究与设计_v1.0 (1).pdf` 总设计文档
+### Sequential warehouse reconfiguration under non-stationary demand and switching costs
 
-## 当前进度(spec 12 件 TODO)
+`Purpose: DECISION SCIENCE` · `Maturity: RESEARCH` · `Evidence: PUBLIC REAL-WORLD DATA`
 
-| # | 任务 | 状态 | 锚点 |
-|---|------|------|------|
-| 1 | `cost_weights.toml` | ✅ | Stage 0 |
-| 2 | `verify_gate.yaml` | ✅ | Stage 0 |
-| 3 | 主指标 `NormalizedCost` 口径 | ✅ partial | Stage 0 / 4 |
-| 4 | Canonical schema DDL | ✅ | Stage 1 |
-| 5 | Instacart 接入(Favorita 留 v0.4) | ✅ R07(真实 basket 重排名) | Stage 1 |
-| 6 | SLAPStack layout 接入 | ⬜(留 v0.2) | Stage 1 |
-| 7 | Affinity 计算器 | ✅ R02 | Stage 2 |
-| 8 | Warehouse graph + travel-time | ◐ 欧氏 proxy + L1 时间;真实标定待 #6 | Stage 2 |
-| 9 | B0 Random + B1 Static ABC + B2 COI | ✅ | Stage 3 |
-| 10 | CP-SAT Dynamic Slotting | ✅ R03(stop-count 目标留 v0.3) | Stage 3 |
-| 11 | SimPy L1 replay | ✅ R04(未标定) | Stage 4 |
-| 12 | Execution Gateway stub | ✅ R06(8/8 路由/拒绝测试) | Stage 4 |
+> Part of **TopPrism Decision Intelligence — Decision Science Research**.
+>
+> This repository is a research engine, not a production WMS or commercial slotting product.
 
-**v0.2 完成:11/12 件落地(剩 #5/#6 真实数据、#12 gateway stub、#8 标定)。**
+## Why this exists
 
-## 实验结果(seed=42, 120 SKU / 60 位置 / 14 天)
+Dynamic warehouse slotting systems are usually designed to answer **how to improve a layout**. This project asks a different question:
 
-> **R05 为排名权威**(时间切分 + 容量公平);R02–R04 的排名声明已被三轮自审撤回(见 `outputs/experiments/REVIEW_v0.2.md`)。
+> **When should a warehouse deliberately defer a locally attractive physical reconfiguration?**
 
-| Run | 内容 | 结果(NormalizedCost vs B1) |
-|-----|------|------------------------------|
-| R01 | schema + B0/B1/B2(legacy 度量:每行距离) | legacy 基线,仅存档 |
-| R02–R04 | affinity / CP-SAT / SimPy(全知协议) | 排名已撤回(违约+泄漏) |
-| **R05** | **诚实评估**:slot 1–7 天 / replay 8–14 天,容量审计 | **B4=0.8089** B3=0.8442 B2=0.9707 B0=1.6686(L0);L1: B4=0.9056 B3=0.9189 B0=1.2893;gates 全 PASS |
-| R06 | Execution Gateway stub(dry-run) | 8/8:四档风险路由 + 5 拒绝码 + §15.4 审计行 |
-| **R07** | **Instacart 真实 basket**(3000 users / top-120,user 级切分) | **B4=0.9115/0.7736** B3=0.9803/0.9251;真实浓度 0.23 vs 合成 0.70,B3 优势几乎消失,B4 稳定获胜 |
+A layout that looks better for the next demand period may still be a poor decision once relocation cost, future regime changes, forecast error and model error are considered.
 
-### 已固化的实验发现(经三轮自审修订)
-1. **世界必须有结构**(Zipf 频率 + basket 共现),否则基线无区分度(gate 抓到)
-2. **仓库几何必须真实**(5m 小仓在时间度量下抹平差异 → 120m 真实几何)
-3. **排序结论前必须做约束公平性审计**(R05):R03 把"B3 违约"误诊为"B4 公式化缺陷";公平条件下 B4 胜 B3
-4. **诚实协议压缩一切**:B3 0.4527(违约+全知)→ 0.7136(容量修正)→ 0.8442(时间切分)
-5. **度量选择两次被 gate 纠正**:makespan 不敏感 → Σ completion 被 release 主导 → Σ flow time
-6. **未被消费的代码也会腐蚀 schema**(forecast zip bug)
+The project studies how much of the full-information value of dynamic reconfiguration can actually be captured by deployable receding-horizon policies.
 
-## 研究状态(v1.3,当前有效)
+## What this project studies
 
-**SPEC_UPDATE_v1.3.md 为最高效力**(v1.2 > v1.1 > v1.0)。DWERP + "When NOT to
-reconfigure" 核心命题;判据 = 事件依赖(保险型)框架。
+A stateful online reconfiguration problem — **DWERP (Deferred Warehouse Reconfiguration Problem)** — formalized inside the **Metrical Task Systems / online optimization with switching costs** family, and stress-tested against six public real-world demand cohorts.
 
-| 关卡 | 状态 |
-|------|------|
-| T0 Diversity | ✅ GO(R10) |
-| T1a Existence | ✅ YES(seed 17:sac 80→regret 2116,TrapScore 26.3) |
-| T1b Prevalence | ✅ 完成(R12:保险型重尾;material trap 1/12;divergence 集中在转变前夜) |
-| T2 Sensitivity | ✅ 完成(R13:左低+中峰(λm=10)+右 plateau;"只搬最关键的") |
-| T1.5 move vs switch | ✅ 完成(R14:Hidden Reconfig 17–69%,指示罚不合格代理) |
-| T3 信息边界 | ✅ 完成(R15:**Capture≈0%**,绑定约束=内部模型保真度;Y1 修复 oracle 非可采纳) |
-| T4 Trap 相图 | ✅ 完成(R16:trap 带=Δt1 中间导程,dynamic 廉价期预置) |
-| Anticipatory v2 | ⬜ 下一步(stop-count 内部模型,目标 capture>0) |
-
-阶段总结文档:`PROGRESS_v1.5.md`(夜间 R17–R20 完成版)
-
-## 工作规则(用户规定,长期有效)
-
-**每次更新对完成的结果自审 3 次,再决定下一步**:
-1. 第一轮·事实核查 —— 取证(跑代码验证),不靠记忆
-2. 第二轮·架构推导 —— 结论是否被证据支撑;撤回/降级不成立的
-3. 第三轮·方法论 —— 过程与规则的改进
-产出 `outputs/experiments/REVIEW_*.md` 后才进入下一里程碑。
-
-## 设计原则(沿用 spec §8.4 自审后 8 条)
-
-1. **State-centric**: World State 是唯一事实中心
-2. **Bounded autonomy**: 任何自动动作必须有边界 + 审批
-3. **Solver-verified**: (等 #10 落地)
-4. **Counterfactual before execute**: (等 #11 落地)
-5. **Progressive disclosure**: schema 自带 `known_at_time` / `lineage` / `constraint_version`
-6. **Multi-timescale**: (Ch.15 设计层面,v0.1 不入环)
-7. **Economic explainability**: 每个 `decision_plan` 含 `expected_cost + baseline_cost + confidence`
-8. **Data lineage**: `source_type` ∈ {observed, derived, synthetic} 强制字段
-
-## 5 阶段 pipeline(模仿 `cultivating-ml-agent`)
-
-- Stage 0: `config/`
-- Stage 1: `world_state/sample.py` + `world_state/validate.py`
-- Stage 2: (留 v0.2)
-- Stage 3: `or_experts/b{0,1}_*.py`
-- Stage 4: `evaluation/compute_normalized_cost.py`
-
-## 运行
-
-```bash
-export PATH=/opt/homebrew/Caskroom/miniconda/base/bin:$PATH
-python scripts/run_r01_schema_and_baselines.py
+```text
+World State S_t
+     ↓
+Candidate layout / routing experts
+     ↓
+Operating-cost estimate
++
+Reconfiguration cost
+     ↓
+Sequential decision policy
+     ↓
+Layout L_t
+     ↓
+Execution / simulation
+     ↓
+State S_{t+1}
 ```
 
-输出 → `outputs/experiments/r01_schema_and_baselines.md`
+The repository also studies where real warehouse mechanics depart from a clean metric abstraction through capacity, exchange, batching and asymmetric operational effects.
+
+## Evidence
+
+### What is currently supported
+
+- **6 public real-world demand datasets / 8 evaluation settings**: WEPA, CrossStacks, Instacart (top-10% / mid-10%), Favorita, M5 (sparse / dense), SLAPRP.
+- **29 reproducible experiments** (`R01`–`R29`) under `scripts/run_r*.py`, with reports in `outputs/experiments/`.
+- **Three self-audit passes** per major conclusion: fact check → inference check → method check. Withdrawn or downgraded claims are preserved in `outputs/experiments/REVIEW_*.md`.
+- **A 16-page, ~5,600-word, 25-reference manuscript** (`paper/main.pdf`) with 5 figures, currently in academic-closure state (v1.5.5) ahead of submission.
+
+### What this evidence does **not** prove
+
+- It does not establish that the approximate full-information planner is globally exact for all large instances. Small-instance exact certification is done on a limited grid (`R18`).
+- It does not establish that all real warehouses exhibit zero deployable reconfiguration value. The empirical deployment-gap collapse (gap = 0.00% across the eight tested settings) is an observed result, not a universality proof.
+- Public retail-demand datasets are not equivalent to full production WMS data with real geometry, equipment calibration and operational constraints.
+- A seventh dataset (**Footwear 2025**) is referenced but could not be downloaded in the test environment; it is listed as future work (`R30`), not as completed evidence.
+- The current project is not a production warehouse execution system.
+
+## Contribution map
+
+The currently published contributions are **three** (see `PROGRESS_v1.5.5.md` §2):
+
+1. **Structural opportunity exists.** DWERP is formalized and stress-tested through seven T-gates (`T0` diversity, `T1a` existence, `T1b` prevalence, `T2` sensitivity, `T1.5` move vs switch, `T3` information boundary, `T4` trap phase diagram). `R18` shows beam-30 equals exact on 4/4 seeds; seed 17 reaches `TrapScore 26.3`.
+
+2. **The deployment paradox.** Full-information reconfiguration opportunities exist, but their deployable value collapses under imperfect forecasts, imperfect internal cost models and realistic demand structure. Across the tested selector families, a fixed conservative policy (`S1 FixedBest`) remained a strong baseline against learned (`S3 XGBoost`, `S4 MLP`) and zero-shot LLM (`S5`) selectors.
+
+3. **Boundary and mechanism.** Across six public datasets / eight evaluation settings, the empirical deployment-gap collapses to 0.00%. A clean MTS abstraction is systematically violated by real warehouse mechanics (asymmetric moves, capacity, batching, exchange chains); the gap between the theoretical metric `d_m(L, L')` and the implementation cost `d_w(L, L')` is itself a finding.
+
+## Where it fits at TopPrism
+
+This project is part of **TopPrism Decision Science Research**. It explores reusable principles for stateful business decisions with transition costs.
+
+Related TopPrism work:
+
+- `visit-scheduling-optimizer` — periodic field-sales planning under recurring constraints.
+- `cultivating-ml-agent` — project-driven capability accumulation for ML agents.
+
+## Status (v1.5.5)
+
+**Academic-closure state.** The 29-run experiment set, three self-audit rounds, six public datasets and v4 manuscript are in place. Remaining items before first submission: `R30` Footwear data acquisition attempt, a multi-seed CI on the main results, the cover letter and the supplementary paired per-instance comparison.
+
+Productization would require additional validation with real warehouse geometry, operational cost calibration, production constraints and execution integration.
+
+## Repository structure
+
+```text
+world_state/     state representation and public-data adapters
+or_experts/      candidate optimization / routing experts
+simulation/      execution and replay environment
+features/        decision features
+execution/       bounded execution / gateway logic
+evaluation/      cost and policy evaluation
+scripts/         reproducible experiment runners
+outputs/         experiment reports and self-audit records
+paper/           manuscript source and PDF
+config/          experiment and cost configuration
+```
+
+## Reproducibility
+
+The repository keeps experiment outputs and self-audit records in version control so that positive findings, negative findings and withdrawn claims remain auditable.
+
+Start from the latest progress document:
+
+```bash
+cat PROGRESS_v1.5.5.md
+cat SPEC_UPDATE_v1.5.md
+```
+
+Then run the experiment script associated with the finding you want to reproduce under `scripts/`.
+
+## Research discipline
+
+A distinctive project rule is that major conclusions are reviewed through three separate passes:
+
+1. **Fact check** — verify results from code and artifacts rather than memory.
+2. **Inference check** — verify that the stated conclusion is actually supported by the evidence.
+3. **Method check** — record what the experiment taught us about the research process itself.
+
+Withdrawn or downgraded conclusions are kept in the experiment history rather than silently rewritten.
+
+## Paper
+
+See `paper/main.pdf` and `paper/main.tex`.
+
+The current manuscript centers on the question:
+
+> **When should a warehouse defer locally optimal physical reconfiguration under non-stationary demand, and how much of the full-information opportunity can deployable policies capture?**
+
+## Boundaries & limitations
+
+- `empirical deployment-gap collapse` is observed on the eight tested settings, not proved as a universal theorem.
+- `FI-Beam-30` remains an approximation; small-instance exact certification is reported only for the limited `R18` grid.
+- `d_m ≠ d_w` is acknowledged as a finding, not as a bug in the abstraction.
+- The selector family comparison is reported on the tested datasets only; selector performance on a different deployment context has not been validated.
+- The Footwear 2025 dataset is referenced but not included as completed evidence.
+- Public retail-demand datasets are not production WMS data; conclusions do not transfer to live warehouse operations without additional validation.
+
+## License
+
+MIT. See `LICENSE`.
