@@ -1,34 +1,37 @@
 topprism:
-  purpose: decision_science
+  purpose: decision-science
   capability: warehouse_reconfiguration_research
+  platform_layer: decision_science
   maturity: research
   evidence:
-    type: public_real_world_data
-    statement: >-
-      Validated on 6 public real-world demand datasets (WEPA, CrossStacks,
-      Instacart, Favorita, M5, SLAPRP) across 8 evaluation settings,
-      with 29 reproducible experiments and a v1.5.5 academic-closure
-      self-audit record.
+    type: public-real-world-data
+    source: openstreetmap-and-public-ml-datasets
+    scope: >-
+      Validated on 6 public real-world demand datasets (WEPA,
+      CrossStacks, Instacart, Favorita, M5, SLAPRP) across 8
+      evaluation settings, with 29 reproducible experiments and a
+      v1.5.5 academic-closure self-audit record.
+    status: academic-closure
 
 business_question:
   en: >-
     When should a warehouse defer a locally attractive physical
     reconfiguration under non-stationary demand, and how much of the
-    resulting full-information opportunity can deployable receding-horizon
-    policies actually capture?
+    resulting full-information opportunity can deployable
+    receding-horizon policies actually capture?
   zh: >-
     在非平稳需求下，仓库何时应延迟眼前最优的物理重配置；在预测与内部
     成本模型均不完美的现实条件下，可部署的滚动决策能捕获多少全信息长期
     规划价值。
 
 platform:
-  system: decision_intelligence
-  layer: decision_science
+  system: decision-intelligence
+  layer: decision-science
   solution: dwerp
 
 website:
-  product_path: /decisions/warehouse
-  evidence_path: /evidence/agentic-warehouse-engine
+  status: planned
+  path: /decisions/warehouse
 
 repository:
   owner: topprismdata
